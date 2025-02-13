@@ -2,9 +2,9 @@ package utils
 
 import (
 	"net"
+	"context"
 
 	"github.com/Microsoft/go-winio"
-	"github.com/linuxkit/virtsock/pkg/hvsock"
 )
 
 const (
@@ -15,14 +15,10 @@ const (
 var HyperVServiceGUID = winio.VsockServiceID(servicePort)
 
 func ConnectHyperV() (net.Conn, error) {
-	svcid, err := hvsock.GUIDFromString(HyperVServiceGUID.String())
-	if err != nil {
-		return nil, err
-	}
+	addr := winio.HvsockAddr{VMID: winio.HvsockGUIDParent(), ServiceID: HyperVServiceGUID}
 
-	// use go-winio when this issue resolved.
-	// see: https://github.com/microsoft/go-winio/issues/198
-	conn, err := hvsock.Dial(hvsock.Addr{VMID: hvsock.GUIDParent, ServiceID: svcid})
+	// would it better to pass context from upper action ?
+	conn, err := winio.Dial(context.Background(), &addr)
 	if err != nil {
 		return nil, err
 	}
