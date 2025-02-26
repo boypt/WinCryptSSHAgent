@@ -5,12 +5,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/buptczq/WinCryptSSHAgent/capi"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/buptczq/WinCryptSSHAgent/capi"
 
 	"github.com/Microsoft/go-winio"
 	"github.com/buptczq/WinCryptSSHAgent/app"
@@ -23,7 +25,14 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const agentTitle = "WinCrypt SSH Agent v1.1.9"
+const agentTitle = "WinCrypt SSH Agent"
+
+// variables for buildtime inject
+var (
+	agentVersion   = "v1.1.9"
+	agentBuildTime = ""
+	agentBuildHash = ""
+)
 
 var applications = []app.Application{
 	new(app.PubKeyView),
@@ -204,7 +213,7 @@ func initSystray(hv bool) (notify.Notifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	title := agentTitle
+	title := fmt.Sprintf("%s %s _ %s", agentTitle, agentVersion, agentBuildTime)
 	if hv {
 		title += " (Hyper-V)"
 	}
