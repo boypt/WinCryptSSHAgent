@@ -110,7 +110,7 @@ func main() {
     // 单实例保护  
     mutex, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr("WinCryptSSHAgent_SingleInstance"))  
     if err != nil {  
-        utils.MessageBox("Error:", "Failed to create mutex: "+err.Error(), utils.MB_ICONERROR)  
+	utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!: "+err.Error(),  utils.MB_ICONWARNING)  
         return  
     }  
     defer windows.CloseHandle(mutex)  
