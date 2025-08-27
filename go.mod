@@ -1,6 +1,6 @@
 module github.com/buptczq/WinCryptSSHAgent
 
-go 1.23
+go 1.23.0
 
 toolchain go1.24.0
 
@@ -8,9 +8,9 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/bi-zone/wmi v1.1.4
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
-	github.com/hattya/go.notify v0.0.0-20250130120447-04e15319a783
-	golang.org/x/crypto v0.33.0
-	golang.org/x/sys v0.30.0
+	github.com/hattya/go.notify v0.0.0-20250819132837-7d70a5d12dfa
+	golang.org/x/crypto v0.41.0
+	golang.org/x/sys v0.35.0
 )
 
 require (
