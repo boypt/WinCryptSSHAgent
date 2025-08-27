@@ -106,6 +106,23 @@ func initDebugLog() {
 }
 
 func main() {
+
+    // 单实例保护  
+    mutex, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr("WinCryptSSHAgent_SingleInstance"))  
+    if err != nil {  
+        utils.MessageBox("Error:", "Failed to create mutex: "+err.Error(), utils.MB_ICONERROR)  
+        return  
+    }  
+    defer windows.CloseHandle(mutex)  
+      
+    // 检查是否已有实例运行  
+    result, err := windows.WaitForSingleObject(mutex, 0)  
+    if err != nil || result != windows.WAIT_OBJECT_0 {  
+        utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!", utils.MB_ICONWARNING)  
+        return  
+    }  
+
+
 	flag.Parse()
 	utils.SetProcessSystemDpiAware()
 	initDebugLog()
