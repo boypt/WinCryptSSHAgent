@@ -1,6 +1,11 @@
 # WinCrypt SSH Agent
 
-![CI](https://github.com/buptczq/WinCryptSSHAgent/workflows/Go/badge.svg)
+## Fork Maintained
+
+- build script
+- single instance
+- go-winio
+- XShell fix by zzmark 
 
 ## Introduction
 
