@@ -29,7 +29,7 @@
         "OriginalFilename": "WinCryptSSHAgent.exe",
         "PrivateBuild": "",
         "ProductName": "WinCrypt SSH Agent",
-        "ProductVersion": "v1.1.9",
+        "ProductVersion": "1.1.10",
         "SpecialBuild": ""
     },
     "VarFileInfo": {
