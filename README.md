@@ -6,6 +6,7 @@
 
 - 🔔 **Authentication Source Channel Tagging**: Notifications now explicitly identify which transport channel requested authentication (e.g., `[Windows OpenSSH]`, `[Hyper-V / WSL2]`, `[Pageant]`, `[WSL]`, `[XShell]`, `[Cygwin]`) in both title and message body.
 - 🖼️ **Notification Icon Optimization**: Notification toasts now reliably use the application's embedded icon with graceful fallbacks, preventing missing or placeholder icons on Windows 10/11.
+- ⚡ **Instant & Graceful Shutdown**: Listeners across all transports (Named Pipe, VSock, XShell, Cygwin, WSL) now cleanly unblock and close on exit signals, eliminating the previous multi-second shutdown delay and reducing polling wakeups.
 - 🔒 **Single-Instance Protection**: Global mutex prevents duplicate running instances from conflicting with sockets and pipes.
 - 🛠️ **Enhanced XShell Compatibility**: Improved packet length handling and protocol compatibility for XShell 5, 7, and 8 Xagent protocol (by zzmark).
 - ⚡ **Modern Hyper-V VSock Implementation**: Replaced deprecated `linuxkit/virtsock` with `go-winio` for native Hyper-V guest socket communication.
