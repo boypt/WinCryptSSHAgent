@@ -1,11 +1,16 @@
 # WinCrypt SSH Agent
 
-## Fork Maintained
+> This repository is a maintained fork based on upstream [`buptczq/WinCryptSSHAgent`](https://github.com/buptczq/WinCryptSSHAgent) (base commit: `1e526e8`).
 
-- build script
-- single instance
-- go-winio
-- XShell fix by zzmark 
+## Fork Features & Enhancements
+
+- 🔔 **Authentication Source Channel Tagging**: Notifications now explicitly identify which transport channel requested authentication (e.g., `[Windows OpenSSH]`, `[Hyper-V / WSL2]`, `[Pageant]`, `[WSL]`, `[XShell]`, `[Cygwin]`) in both title and message body.
+- 🖼️ **Notification Icon Optimization**: Notification toasts now reliably use the application's embedded icon with graceful fallbacks, preventing missing or placeholder icons on Windows 10/11.
+- 🔒 **Single-Instance Protection**: Global mutex prevents duplicate running instances from conflicting with sockets and pipes.
+- 🛠️ **Enhanced XShell Compatibility**: Improved packet length handling and protocol compatibility for XShell 5, 7, and 8 Xagent protocol (by zzmark).
+- ⚡ **Modern Hyper-V VSock Implementation**: Replaced deprecated `linuxkit/virtsock` with `go-winio` for native Hyper-V guest socket communication.
+- 📦 **Automated Multi-Arch Build Pipeline**: Added `build.sh` (supporting `amd64` and `386`) with automatic `versioninfo.json` synchronization from Git tags, and injected build metadata (version, commit hash, build date) into binaries and the systray title.
+- ⬆️ **Upgraded Toolchain & Dependencies**: Upgraded Go modules (`golang.org/x/crypto`, `golang.org/x/sys`, `go.notify`, etc.) with multi-platform resource support.
 
 ## Introduction
 
