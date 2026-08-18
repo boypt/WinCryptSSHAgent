@@ -38,12 +38,18 @@ func (a *WrappedAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, err
 }
 
 func (a *WrappedAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.SignatureFlags) (*ssh.Signature, error) {
+	return a.SignWithSource(key, data, flags, "")
+}
+
+func (a *WrappedAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.SignatureFlags, source string) (*ssh.Signature, error) {
 	var firstError error
 
 	for _, agent_ := range a.agents {
 		var sign *ssh.Signature
 		var err error
-		if extendAgent, ok := agent_.(agent.ExtendedAgent); ok {
+		if srcAgent, ok := agent_.(SourceSigner); ok {
+			sign, err = srcAgent.SignWithSource(key, data, flags, source)
+		} else if extendAgent, ok := agent_.(agent.ExtendedAgent); ok {
 			sign, err = extendAgent.SignWithFlags(key, data, flags)
 		} else {
 			sign, err = agent_.Sign(key, data)

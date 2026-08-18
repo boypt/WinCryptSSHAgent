@@ -3,6 +3,7 @@ package sshagent
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"github.com/buptczq/WinCryptSSHAgent/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -27,10 +28,14 @@ func (s *KeyRingAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, err
 }
 
 func (s *KeyRingAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.SignatureFlags) (*ssh.Signature, error) {
+	return s.SignWithSource(key, data, flags, "")
+}
+
+func (s *KeyRingAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.SignatureFlags, source string) (*ssh.Signature, error) {
 	comment := s.findKeyComment(key)
 	sig, err := s.ag.SignWithFlags(key, data, flags)
 	if err == nil {
-		s.signed(comment)
+		s.signed(comment, source)
 	}
 	return sig, err
 }
@@ -96,11 +101,14 @@ func (s *KeyRingAgent) Signers() ([]ssh.Signer, error) {
 	return s.ag.Signers()
 }
 
-func (s *KeyRingAgent) signed(comment string) {
-	utils.Notify(
-		"Authenticated (Keyring)",
-		"Authentication Success by Key <"+comment+">",
-	)
+func (s *KeyRingAgent) signed(comment, source string) {
+	title := "Authenticated (Keyring)"
+	msg := "Authentication Success by Key <" + comment + ">"
+	if source != "" {
+		title = fmt.Sprintf("[%s] Authenticated (Keyring)", source)
+		msg = fmt.Sprintf("Authentication Success by Key <%s>\nChannel: %s", comment, source)
+	}
+	utils.Notify(title, msg)
 }
 
 func (s *KeyRingAgent) Extension(extensionType string, contents []byte) ([]byte, error) {

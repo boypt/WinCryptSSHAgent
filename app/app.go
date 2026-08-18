@@ -37,6 +37,8 @@ var appIdToName = map[AppId]string{
 	APP_PAGEANT:   "Pageant",
 	APP_XSHELL:    "XShell",
 	APP_HYPERV:    "Hyper-V",
+	APP_PUBKEY:    "PubKey",
+	APP_WSL2:      "WSL2",
 }
 
 var appIdToFullName = map[AppId]string{
@@ -46,7 +48,9 @@ var appIdToFullName = map[AppId]string{
 	APP_SECURECRT: "SecureCRT",
 	APP_PAGEANT:   "Pageant",
 	APP_XSHELL:    "XShell",
-	APP_HYPERV:    "Hyper-V",
+	APP_HYPERV:    "Hyper-V / WSL2",
+	APP_PUBKEY:    "Public Keys",
+	APP_WSL2:      "Windows Subsystem for Linux (WSL2)",
 }
 
 func (id AppId) String() string {

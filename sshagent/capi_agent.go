@@ -109,14 +109,21 @@ func (s *CAPIAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error)
 	return s.SignWithFlags(key, data, 0)
 }
 
-func (s *CAPIAgent) signed(comment string) {
-	utils.Notify(
-		"Authenticated",
-		"Authentication Success by Certificate <"+comment+">",
-	)
+func (s *CAPIAgent) signed(comment, source string) {
+	title := "Authenticated"
+	msg := "Authentication Success by Certificate <" + comment + ">"
+	if source != "" {
+		title = fmt.Sprintf("[%s] Authenticated", source)
+		msg = fmt.Sprintf("Authentication Success by Certificate <%s>\nChannel: %s", comment, source)
+	}
+	utils.Notify(title, msg)
 }
 
 func (s *CAPIAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.SignatureFlags) (*ssh.Signature, error) {
+	return s.SignWithSource(key, data, flags, "")
+}
+
+func (s *CAPIAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.SignatureFlags, source string) (*ssh.Signature, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -140,7 +147,7 @@ func (s *CAPIAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.Si
 			if flags == 0 {
 				sign, err := k.signer.Sign(rand.Reader, data)
 				if err == nil {
-					s.signed(k.comment)
+					s.signed(k.comment, source)
 				}
 				return sign, err
 			} else {
@@ -158,7 +165,7 @@ func (s *CAPIAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.Si
 					}
 					sign, err := algorithmSigner.SignWithAlgorithm(rand.Reader, data, algorithm)
 					if err == nil {
-						s.signed(k.comment)
+						s.signed(k.comment, source)
 					}
 					return sign, err
 				}

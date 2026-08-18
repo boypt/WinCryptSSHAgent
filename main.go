@@ -1,6 +1,6 @@
 package main
 
-//go:generate goversioninfo -icon=assets/icon.ico
+//go:generate goversioninfo -platform-specific -icon=assets/icon.ico
 
 import (
 	"context"
@@ -176,7 +176,8 @@ func main() {
 		v.Menu(menu.Register)
 		wg.Add(1)
 		go func(application app.Application) {
-			err := application.Run(ctx, server.SSHAgentHandler)
+			handler := server.SSHAgentHandlerWithSource(application.AppId().FullName())
+			err := application.Run(ctx, handler)
 			if err != nil {
 				utils.MessageBox(application.AppId().String()+" Error:", err.Error(), utils.MB_ICONWARNING)
 			}
