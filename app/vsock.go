@@ -123,6 +123,9 @@ func (s *VSock) wsl2Watcher(ctx context.Context, handler func(conn io.ReadWriteC
 		lastVMIDs = vmids
 		select {
 		case <-ctx.Done():
+			for _, w := range workers {
+				w.Close()
+			}
 			return
 		case <-ch:
 		case <-time.After(timeout):
@@ -161,6 +164,7 @@ func (s *VSock) Run(ctx context.Context, handler func(conn io.ReadWriteCloser)) 
 	// context cancelled
 	go func() {
 		<-ctx.Done()
+		pipe.Close()
 		wg.Wait()
 	}()
 	// loop

@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
 )
 
 type Cygwin struct {
@@ -78,7 +77,7 @@ func (s *Cygwin) Run(ctx context.Context, handler func(conn io.ReadWriteCloser))
 		return err
 	}
 	defer func() {
-		defer l.Close()
+		l.Close()
 		os.Remove(sockfile)
 	}()
 	// cygwin socket uuid
@@ -88,21 +87,22 @@ func (s *Cygwin) Run(ctx context.Context, handler func(conn io.ReadWriteCloser))
 		return err
 	}
 	s.running = true
-	// loop
+
 	wg := new(sync.WaitGroup)
+	// context cancelled
+	go func() {
+		<-ctx.Done()
+		l.Close()
+		wg.Wait()
+	}()
+
+	// loop
 	for {
-		select {
-		case <-ctx.Done():
-			wg.Wait()
-			return nil
-		default:
-		}
-		utils.SetListenerDeadline(l, time.Now().Add(time.Second))
 		conn, err := l.Accept()
-		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-			continue
-		}
 		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
 			return err
 		}
 		err = cygwinHandshake(conn, uuid)

@@ -27,13 +27,14 @@ func (s *NamedPipe) Run(ctx context.Context, handler func(conn io.ReadWriteClose
 	// context cancelled
 	go func() {
 		<-ctx.Done()
+		pipe.Close()
 		wg.Wait()
 	}()
 	// loop
 	for {
 		conn, err := pipe.Accept()
 		if err != nil {
-			if err != winio.ErrPipeListenerClosed {
+			if err != winio.ErrPipeListenerClosed && ctx.Err() == nil {
 				return err
 			}
 			return nil

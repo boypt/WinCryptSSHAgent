@@ -104,6 +104,9 @@ func (s *XAgent) Listener() net.Listener {
 }
 
 func (s *XAgent) Close() {
+	if s.socket != nil {
+		s.socket.Close()
+	}
 	s.cookieWin.Close()
 	s.singleInstanceWin.Close()
 }

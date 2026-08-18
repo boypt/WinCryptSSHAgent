@@ -30,10 +30,19 @@ func (s *XShell) Run(ctx context.Context, handler func(conn io.ReadWriteCloser))
 	defer win.Close()
 
 	wg := new(sync.WaitGroup)
+	go func() {
+		<-ctx.Done()
+		win.Close()
+		wg.Wait()
+	}()
+
 	l := win.Listener()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
 			if err != io.ErrClosedPipe {
 				return err
 			}

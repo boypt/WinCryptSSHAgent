@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 type WSL struct {
@@ -61,21 +60,22 @@ func (s *WSL) Run(ctx context.Context, handler func(conn io.ReadWriteCloser)) er
 		s.help = fmt.Sprintf("socat UNIX-LISTEN:/tmp/ssh-capi-agent.sock,reuseaddr,fork TCP:localhost:%d &\n", l.Addr().(*net.TCPAddr).Port)
 		s.help += "export SSH_AUTH_SOCK=/tmp/ssh-capi-agent.sock"
 	}
-	// loop
+
 	wg := new(sync.WaitGroup)
+	// context cancelled
+	go func() {
+		<-ctx.Done()
+		l.Close()
+		wg.Wait()
+	}()
+
+	// loop
 	for {
-		select {
-		case <-ctx.Done():
-			wg.Wait()
-			return nil
-		default:
-		}
-		utils.SetListenerDeadline(l, time.Now().Add(time.Second))
 		conn, err := l.Accept()
-		if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-			continue
-		}
 		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
 			return err
 		}
 		wg.Add(1)
