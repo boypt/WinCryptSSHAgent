@@ -238,9 +238,15 @@ func initSystray(hv bool) (notify.Notifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	n.Register("info", notification.IconInfo, map[string]interface{}{
-		"windows:sound": false,
+	err = n.Register("info", icon, map[string]interface{}{
+		"windows:fallback-icon": notification.IconInfo,
+		"windows:sound":         false,
 	})
+	if err != nil {
+		_ = n.Register("info", notification.IconInfo, map[string]interface{}{
+			"windows:sound": false,
+		})
+	}
 	utils.RegisterNotifier(n)
 	return n, nil
 }
