@@ -39,6 +39,25 @@ func (s *CAPIAgent) Close() (err error) {
 	return s.close()
 }
 
+func certDisplayName(cert *capi.Certificate) string {
+	if cert.Subject.CommonName != "" {
+		return cert.Subject.CommonName
+	}
+	if len(cert.EmailAddresses) > 0 {
+		return cert.EmailAddresses[0]
+	}
+	if len(cert.DNSNames) > 0 {
+		return cert.DNSNames[0]
+	}
+	if cert.Subject.String() != "" {
+		return cert.Subject.String()
+	}
+	if cert.SerialNumber != nil {
+		return fmt.Sprintf("Serial-%s", cert.SerialNumber.String())
+	}
+	return "Unknown Certificate"
+}
+
 func (s *CAPIAgent) loadCerts() (err error) {
 	certs, err := capi.LoadUserCerts()
 	if err != nil {
@@ -58,7 +77,7 @@ func (s *CAPIAgent) loadCerts() (err error) {
 		}
 		key := &sshKey{
 			cert:    cert,
-			comment: cert.Subject.CommonName,
+			comment: certDisplayName(cert),
 		}
 		switch pub.Type() {
 		case ssh.KeyAlgoRSA:
@@ -111,10 +130,10 @@ func (s *CAPIAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error)
 
 func (s *CAPIAgent) signed(comment, source string) {
 	title := "Authenticated"
-	msg := "Authentication Success by Certificate <" + comment + ">"
+	msg := fmt.Sprintf("Cert: <%s>", comment)
 	if source != "" {
 		title = fmt.Sprintf("[%s] Authenticated", source)
-		msg = fmt.Sprintf("Authentication Success by Certificate <%s>\nChannel: %s", comment, source)
+		msg = fmt.Sprintf("Cert: <%s>\nChannel: %s", comment, source)
 	}
 	utils.Notify(title, msg)
 }

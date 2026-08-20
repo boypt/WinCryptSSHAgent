@@ -103,10 +103,10 @@ func (s *KeyRingAgent) Signers() ([]ssh.Signer, error) {
 
 func (s *KeyRingAgent) signed(comment, source string) {
 	title := "Authenticated (Keyring)"
-	msg := "Authentication Success by Key <" + comment + ">"
+	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
 		title = fmt.Sprintf("[%s] Authenticated (Keyring)", source)
-		msg = fmt.Sprintf("Authentication Success by Key <%s>\nChannel: %s", comment, source)
+		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
 	}
 	utils.Notify(title, msg)
 }

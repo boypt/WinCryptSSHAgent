@@ -52,9 +52,13 @@ func loadSSHCertificate(key *sshKey) (*sshKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	comment := cert.KeyId
+	if comment == "" {
+		comment = key.comment
+	}
 	return &sshKey{
 		cert:    newX509Cert,
 		signer:  signer,
-		comment: cert.KeyId,
+		comment: comment,
 	}, nil
 }
