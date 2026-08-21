@@ -41,16 +41,31 @@ func (s *SourceAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.
 	return s.agent.Sign(key, data)
 }
 
+type SourceNotifier interface {
+    AddWithSource(key agent.AddedKey, source string) error
+    RemoveWithSource(key ssh.PublicKey, source string) error
+    RemoveAllWithSource(source string) error
+}
+
 func (s *SourceAgent) Add(key agent.AddedKey) error {
-	return s.agent.Add(key)
+    if notifier, ok := s.agent.(SourceNotifier); ok {
+        return notifier.AddWithSource(key, s.source)
+    }
+    return s.agent.Add(key)
 }
 
 func (s *SourceAgent) Remove(key ssh.PublicKey) error {
-	return s.agent.Remove(key)
+    if notifier, ok := s.agent.(SourceNotifier); ok {
+        return notifier.RemoveWithSource(key, s.source)
+    }
+    return s.agent.Remove(key)
 }
 
 func (s *SourceAgent) RemoveAll() error {
-	return s.agent.RemoveAll()
+    if notifier, ok := s.agent.(SourceNotifier); ok {
+        return notifier.RemoveAllWithSource(s.source)
+    }
+    return s.agent.RemoveAll()
 }
 
 func (s *SourceAgent) Lock(passphrase []byte) error {

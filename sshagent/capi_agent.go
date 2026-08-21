@@ -130,10 +130,9 @@ func (s *CAPIAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error)
 
 func (s *CAPIAgent) signed(comment, source string) {
 	title := "Authenticated"
-	msg := fmt.Sprintf("Cert: <%s>", comment)
+	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
-		title = fmt.Sprintf("[%s] Authenticated", source)
-		msg = fmt.Sprintf("Cert: <%s>\nChannel: %s", comment, source)
+		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
 	}
 	utils.Notify(title, msg)
 }

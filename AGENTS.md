@@ -11,6 +11,7 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
   - `./build.sh` — full 64-bit build: syncs `versioninfo.json` from the latest `v*` git tag (requires `jq`), runs `go generate`, injects version ldflags (`-X main.agentVersion/...`), outputs `WinCryptSSHAgent.exe`. Restores `versioninfo.json` afterward locally (CI keeps it changed).
   - `./build.sh all` → 386 + amd64; `./build.sh <arch>` → single arch.
   - `build.bat` is the Windows equivalent but does not inject version ldflags.
+  - When building manually with `go build`, add `-ldflags "-w -s -H=windowsgui"` (same as in `build.sh`).
 - `go generate` runs `goversioninfo` — install first: `go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest`. It generates `resource.syso` (gitignored, embedded icon/version info).
 
 ## Release

@@ -55,15 +55,46 @@ fallback:
 	return base64.StdEncoding.EncodeToString(wanted)
 }
 
+func (s *KeyRingAgent) AddWithSource(key agent.AddedKey, source string) error {
+    err := s.ag.Add(key)
+    if err == nil {
+        msg := fmt.Sprintf("Key <%s> has been added to keyring", key.Comment)
+        if source != "" {
+            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+        }
+        utils.Notify("Key Added", msg)
+    }
+    return err
+}
+
+// Add implements agent.Agent.Add and forwards to AddWithSource with empty source.
 func (s *KeyRingAgent) Add(key agent.AddedKey) error {
-	err := s.ag.Add(key)
-	if err == nil {
-		defer utils.Notify(
-			"Key Added",
-			"Key <"+key.Comment+"> has been added to keyring",
-		)
-	}
-	return err
+    return s.AddWithSource(key, "")
+}
+
+func (s *KeyRingAgent) RemoveWithSource(key ssh.PublicKey, source string) error {
+    comment := s.findKeyComment(key)
+    err := s.ag.Remove(key)
+    if err == nil {
+        msg := fmt.Sprintf("Key <%s> has been removed from keyring", comment)
+        if source != "" {
+            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+        }
+        utils.Notify("Key Removed", msg)
+    }
+    return err
+}
+
+func (s *KeyRingAgent) RemoveAllWithSource(source string) error {
+    err := s.ag.RemoveAll()
+    if err == nil {
+        msg := "All Keys have been removed from keyring"
+        if source != "" {
+            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+        }
+        utils.Notify("Key Removed", msg)
+    }
+    return err
 }
 
 func (s *KeyRingAgent) Remove(key ssh.PublicKey) error {
@@ -105,7 +136,6 @@ func (s *KeyRingAgent) signed(comment, source string) {
 	title := "Authenticated (Keyring)"
 	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
-		title = fmt.Sprintf("[%s] Authenticated (Keyring)", source)
 		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
 	}
 	utils.Notify(title, msg)
