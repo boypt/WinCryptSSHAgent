@@ -62,7 +62,7 @@ func (s *KeyRingAgent) AddWithSource(key agent.AddedKey, source string) error {
         if source != "" {
             msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
         }
-        utils.Notify("Key Added", msg)
+        utils.NotifyAdd("Key Added", msg)
     }
     return err
 }
@@ -80,7 +80,7 @@ func (s *KeyRingAgent) RemoveWithSource(key ssh.PublicKey, source string) error 
         if source != "" {
             msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
         }
-        utils.Notify("Key Removed", msg)
+        utils.NotifyRemove("Key Removed", msg)
     }
     return err
 }
@@ -92,7 +92,7 @@ func (s *KeyRingAgent) RemoveAllWithSource(source string) error {
         if source != "" {
             msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
         }
-        utils.Notify("Key Removed", msg)
+        utils.NotifyRemove("Key Removed", msg)
     }
     return err
 }
@@ -101,7 +101,7 @@ func (s *KeyRingAgent) Remove(key ssh.PublicKey) error {
 	comment := s.findKeyComment(key)
 	err := s.ag.Remove(key)
 	if err == nil {
-		defer utils.Notify(
+		defer utils.NotifyRemove(
 			"Key Removed",
 			"Key <"+comment+"> has been removed from keyring",
 		)
@@ -112,7 +112,7 @@ func (s *KeyRingAgent) Remove(key ssh.PublicKey) error {
 func (s *KeyRingAgent) RemoveAll() error {
 	err := s.ag.RemoveAll()
 	if err == nil {
-		defer utils.Notify(
+		defer utils.NotifyRemove(
 			"Key Removed",
 			"All Keys have been removed from keyring",
 		)
@@ -138,7 +138,7 @@ func (s *KeyRingAgent) signed(comment, source string) {
 	if source != "" {
 		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
 	}
-	utils.Notify(title, msg)
+	utils.NotifyAuth(title, msg)
 }
 
 func (s *KeyRingAgent) Extension(extensionType string, contents []byte) ([]byte, error) {

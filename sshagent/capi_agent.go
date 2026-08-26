@@ -134,7 +134,7 @@ func (s *CAPIAgent) signed(comment, source string) {
 	if source != "" {
 		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
 	}
-	utils.Notify(title, msg)
+	utils.NotifyAuth(title, msg)
 }
 
 func (s *CAPIAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.SignatureFlags) (*ssh.Signature, error) {

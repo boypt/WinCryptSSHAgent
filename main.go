@@ -239,15 +239,33 @@ func initSystray(hv bool) (notify.Notifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = n.Register("info", icon, map[string]interface{}{
+	// "auth" event: Authenticated (keeps original icon.ico)
+	err = n.Register("auth", icon, map[string]interface{}{
 		"windows:fallback-icon": notification.IconInfo,
 		"windows:sound":         false,
 	})
 	if err != nil {
-		_ = n.Register("info", notification.IconInfo, map[string]interface{}{
+		_ = n.Register("auth", notification.IconInfo, map[string]interface{}{
 			"windows:sound": false,
 		})
 	}
+
+	// "info" / "add" event: Key added (IconInfo / NIIF_INFO)
+	_ = n.Register("info", notification.IconInfo, map[string]interface{}{
+		"windows:sound": false,
+	})
+	_ = n.Register("add", notification.IconInfo, map[string]interface{}{
+		"windows:sound": false,
+	})
+
+	// "warn" / "remove" event: Key removed (IconWarn / NIIF_WARNING)
+	_ = n.Register("warn", notification.IconWarn, map[string]interface{}{
+		"windows:sound": false,
+	})
+	_ = n.Register("remove", notification.IconWarn, map[string]interface{}{
+		"windows:sound": false,
+	})
+
 	utils.RegisterNotifier(n)
 	return n, nil
 }

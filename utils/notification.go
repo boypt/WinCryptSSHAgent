@@ -65,10 +65,26 @@ func MessageBox(title, text string, style uintptr) int {
 }
 
 func Notify(title, message string) {
+	NotifyEvent("info", title, message)
+}
+
+func NotifyEvent(event, title, message string) {
 	if notifier == nil {
 		return
 	}
-	notifier.Notify("info", title, message)
+	notifier.Notify(event, title, message)
+}
+
+func NotifyAuth(title, message string) {
+	NotifyEvent("auth", title, message)
+}
+
+func NotifyAdd(title, message string) {
+	NotifyEvent("add", title, message)
+}
+
+func NotifyRemove(title, message string) {
+	NotifyEvent("remove", title, message)
 }
 
 func RegisterNotifier(n notify.Notifier) {
