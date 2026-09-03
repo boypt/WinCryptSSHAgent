@@ -1,16 +1,34 @@
 package utils
 
 import (
-	"github.com/hattya/go.notify"
 	"syscall"
 	"unsafe"
+
+	"github.com/hattya/go.notify"
+	"golang.org/x/sys/windows"
 )
 
 var (
-	moduser32      = syscall.NewLazyDLL("user32.dll")
-	procMessageBox = moduser32.NewProc("MessageBoxW")
-	notifier       notify.Notifier
+	moduser32              = syscall.NewLazyDLL("user32.dll")
+	modkernel32            = syscall.NewLazyDLL("kernel32.dll")
+	procMessageBox         = moduser32.NewProc("MessageBoxW")
+	procMessageBoxIndirect = moduser32.NewProc("MessageBoxIndirectW")
+	procGetModuleHandle    = modkernel32.NewProc("GetModuleHandleW")
+	notifier               notify.Notifier
 )
+
+type msgBoxParams struct {
+	cbSize             uint32
+	hwndOwner          windows.Handle
+	hInstance          windows.Handle
+	lpszText           *uint16
+	lpszCaption        *uint16
+	dwStyle            uint32
+	lpszIcon           uintptr
+	dwContextHelpId    uintptr
+	lpfnMsgBoxCallback uintptr
+	dwLanguageId       uint32
+}
 
 const (
 	MB_OK                = 0x00000000
@@ -66,6 +84,29 @@ func MessageBox(title, text string, style uintptr) int {
 		style,
 		0,
 		0)
+	return int(ret)
+}
+
+// MessageBoxIndirect displays a message box with custom properties such as MB_USERICON.
+func MessageBoxIndirect(title, text string, style uintptr, iconResId uintptr) int {
+	pText, err := syscall.UTF16PtrFromString(text)
+	if err != nil {
+		return -1
+	}
+	pTitle, err := syscall.UTF16PtrFromString(title)
+	if err != nil {
+		return -1
+	}
+	hInst, _, _ := procGetModuleHandle.Call(0)
+	params := msgBoxParams{
+		cbSize:      uint32(unsafe.Sizeof(msgBoxParams{})),
+		hInstance:   windows.Handle(hInst),
+		lpszText:    pText,
+		lpszCaption: pTitle,
+		dwStyle:     uint32(style),
+		lpszIcon:    iconResId,
+	}
+	ret, _, _ := procMessageBoxIndirect.Call(uintptr(unsafe.Pointer(&params)))
 	return int(ret)
 }
 

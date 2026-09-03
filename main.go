@@ -209,13 +209,15 @@ func main() {
 			v.Menu(menu.Register)
 		}
 		menu.menu.Sep()
-		if utils.ConfirmRequired {
-			menu.menu.Item("• Manual Confirm", app.MENU_CONFIRM_MANUAL)
-			menu.menu.Item("  Auto Confirm", app.MENU_CONFIRM_AUTO)
-		} else {
-			menu.menu.Item("  Manual Confirm", app.MENU_CONFIRM_MANUAL)
-			menu.menu.Item("• Auto Confirm", app.MENU_CONFIRM_AUTO)
+		mark := func(checked bool) string {
+			if checked {
+				return "• "
+			}
+			return "  "
 		}
+		menu.menu.Item(mark(utils.ConfirmRequired)+"Manual Confirm", app.MENU_CONFIRM_MANUAL)
+		menu.menu.Item(mark(!utils.ConfirmRequired)+"Auto Confirm", app.MENU_CONFIRM_AUTO)
+		menu.menu.Sep()
 		menu.menu.Item("Quit", app.MENU_QUIT)
 	}
 

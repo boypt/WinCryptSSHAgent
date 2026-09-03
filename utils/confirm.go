@@ -49,8 +49,13 @@ func SaveConfirmToRegistry(manual bool) {
 // RequestConfirm shows a blocking Yes/No dialog and returns true if the user
 // clicked Yes.
 func RequestConfirm(title, message string) bool {
-	style := uintptr(MB_YESNO | MB_ICONQUESTION | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
-	ret := MessageBox(title, message, style)
+	style := uintptr(MB_YESNO | MB_USERICON | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
+	ret := MessageBoxIndirect(title, message, style, 1)
+	if ret == 0 {
+		// Fallback to standard MessageBox in case icon loading fails
+		fallbackStyle := uintptr(MB_YESNO | MB_ICONQUESTION | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
+		ret = MessageBox(title, message, fallbackStyle)
+	}
 	return ret == IDYES
 }
 
