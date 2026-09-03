@@ -17,8 +17,8 @@ github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brv
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
-github.com/hattya/go.notify v0.0.0-20250819132837-7d70a5d12dfa h1:1ZOr6ylfvc8Z4z8O7q2I8A+Ldswh0T7xfejJYkoR8Hg=
-github.com/hattya/go.notify v0.0.0-20250819132837-7d70a5d12dfa/go.mod h1:vS2z7AIlbWbSqT6/XvwfSw54CJmhikpY6LAIaKAlDUk=
+github.com/hattya/go.notify v0.1.0 h1:XKXBfY+iydKXsE8BLC+MuNDLPB20z77F2IoQssPuPP4=
+github.com/hattya/go.notify v0.1.0/go.mod h1:nuvugyquHn/r8mFz1tmLqhC8MZ2bUhproXK3bquNsiM=
 github.com/scjalliance/comshim v0.0.0-20190308082608-cf06d2532c4e/go.mod h1:9Tc1SKnfACJb9N7cw2eyuI6xzy845G7uZONBsi5uPEA=
 github.com/scjalliance/comshim v0.0.0-20250111221056-b2ef9d8d7e0f h1:v+bqkkvZj6Oasqi58jzJk03XO0vaXvdb6SS9U1Rbqpw=
 github.com/scjalliance/comshim v0.0.0-20250111221056-b2ef9d8d7e0f/go.mod h1:Zt2M6t3i/fnWviIZkuw9wGn2E185P/rWZTqJkIrViGY=
@@ -27,7 +27,7 @@ golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sU
 golang.org/x/sys v0.0.0-20190916202348-b4ddaad3f8a3/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200806060901-a37d78b92225/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
-golang.org/x/sys v0.35.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
+golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 golang.org/x/term v0.34.0 h1:O/2T7POpk0ZZ7MAzMeWFSg6S5IpWd/RXDlM9hgM3DR4=
 golang.org/x/term v0.34.0/go.mod h1:5jC53AEywhIVebHgPVeg0mj8OD3VO9OzclacVrqpaAw=
