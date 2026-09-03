@@ -132,7 +132,7 @@ func (s *CAPIAgent) signed(comment, source string) {
 	title := "Authenticated"
 	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
-		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
+		msg = fmt.Sprintf("Key: <%s>\nSource: %s", comment, source)
 	}
 	utils.NotifyAuth(title, msg)
 }

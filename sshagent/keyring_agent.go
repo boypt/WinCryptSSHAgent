@@ -69,7 +69,7 @@ func (s *KeyRingAgent) AddWithSource(key agent.AddedKey, source string) error {
     if err == nil {
         msg := fmt.Sprintf("Key <%s> has been added to keyring", key.Comment)
         if source != "" {
-            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+            msg = fmt.Sprintf("%s\nSource: %s", msg, source)
         }
         utils.NotifyAdd("Key Added", msg)
     }
@@ -87,7 +87,7 @@ func (s *KeyRingAgent) RemoveWithSource(key ssh.PublicKey, source string) error 
     if err == nil {
         msg := fmt.Sprintf("Key <%s> has been removed from keyring", comment)
         if source != "" {
-            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+            msg = fmt.Sprintf("%s\nSource: %s", msg, source)
         }
         utils.NotifyRemove("Key Removed", msg)
     }
@@ -99,7 +99,7 @@ func (s *KeyRingAgent) RemoveAllWithSource(source string) error {
     if err == nil {
         msg := "All Keys have been removed from keyring"
         if source != "" {
-            msg = fmt.Sprintf("%s\nChannel: %s", msg, source)
+            msg = fmt.Sprintf("%s\nSource: %s", msg, source)
         }
         utils.NotifyRemove("Key Removed", msg)
     }
@@ -145,7 +145,7 @@ func (s *KeyRingAgent) signed(comment, source string) {
 	title := "Authenticated (Keyring)"
 	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
-		msg = fmt.Sprintf("Key: <%s>\nChannel: %s", comment, source)
+		msg = fmt.Sprintf("Key: <%s>\nSource: %s", comment, source)
 	}
 	utils.NotifyAuth(title, msg)
 }
