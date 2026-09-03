@@ -19,6 +19,7 @@ const (
 	APP_PUBKEY
 	APP_WSL2
 	MENU_QUIT
+	MENU_CONFIRM_TOGGLE
 )
 
 type Application interface {

@@ -160,37 +160,54 @@ func (s *CAPIAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.S
 	}
 
 	wanted := key.Marshal()
+	var matched *sshKey
 	for _, k := range s.keys {
 		if bytes.Equal(k.signer.PublicKey().Marshal(), wanted) {
-			if flags == 0 {
-				sign, err := k.signer.Sign(rand.Reader, data)
-				if err == nil {
-					s.signed(k.comment, source)
-				}
-				return sign, err
-			} else {
-				if algorithmSigner, ok := k.signer.(ssh.AlgorithmSigner); !ok {
-					return nil, fmt.Errorf("agent: signature does not support non-default signature algorithm: %T", k.signer)
-				} else {
-					var algorithm string
-					switch flags {
-					case agent.SignatureFlagRsaSha256:
-						algorithm = ssh.SigAlgoRSASHA2256
-					case agent.SignatureFlagRsaSha512:
-						algorithm = ssh.SigAlgoRSASHA2512
-					default:
-						return nil, fmt.Errorf("agent: unsupported signature flags: %d", flags)
-					}
-					sign, err := algorithmSigner.SignWithAlgorithm(rand.Reader, data, algorithm)
-					if err == nil {
-						s.signed(k.comment, source)
-					}
-					return sign, err
-				}
-			}
+			matched = k
+			break
 		}
 	}
-	return nil, errors.New("not found")
+	if matched == nil {
+		return nil, errors.New("not found")
+	}
+
+	// 签名确认 / signing confirmation gate
+	if utils.ConfirmRequired {
+		s.mu.Unlock()
+		fp := ssh.FingerprintSHA256(matched.signer.PublicKey())
+		ok := utils.ConfirmSign(matched.comment, fp, source)
+		s.mu.Lock()
+		if !ok {
+			return nil, fmt.Errorf("signing denied by user")
+		}
+	}
+
+	if flags == 0 {
+		sign, err := matched.signer.Sign(rand.Reader, data)
+		if err == nil {
+			s.signed(matched.comment, source)
+		}
+		return sign, err
+	}
+
+	algorithmSigner, ok := matched.signer.(ssh.AlgorithmSigner)
+	if !ok {
+		return nil, fmt.Errorf("agent: signature does not support non-default signature algorithm: %T", matched.signer)
+	}
+	var algorithm string
+	switch flags {
+	case agent.SignatureFlagRsaSha256:
+		algorithm = ssh.SigAlgoRSASHA2256
+	case agent.SignatureFlagRsaSha512:
+		algorithm = ssh.SigAlgoRSASHA2512
+	default:
+		return nil, fmt.Errorf("agent: unsupported signature flags: %d", flags)
+	}
+	sign, err := algorithmSigner.SignWithAlgorithm(rand.Reader, data, algorithm)
+	if err == nil {
+		s.signed(matched.comment, source)
+	}
+	return sign, err
 }
 
 func (*CAPIAgent) Add(key agent.AddedKey) error {

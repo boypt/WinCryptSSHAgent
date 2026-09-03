@@ -33,6 +33,15 @@ func (s *KeyRingAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent
 
 func (s *KeyRingAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.SignatureFlags, source string) (*ssh.Signature, error) {
 	comment := s.findKeyComment(key)
+
+	// 签名确认 / signing confirmation gate
+	if utils.ConfirmRequired {
+		fp := ssh.FingerprintSHA256(key)
+		if !utils.ConfirmSign(comment, fp, source) {
+			return nil, fmt.Errorf("signing denied by user")
+		}
+	}
+
 	sig, err := s.ag.SignWithFlags(key, data, flags)
 	if err == nil {
 		s.signed(comment, source)

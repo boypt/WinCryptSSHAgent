@@ -47,6 +47,7 @@ var applications = []app.Application{
 var installHVService = flag.Bool("i", false, "Install Hyper-V Guest Communication Services")
 var disableCapi = flag.Bool("disable-capi", false, "Disable Windows Crypto API")
 var disablePINCache = flag.Bool("disable-pin-cache", false, "Clear the Smart Card PIN Cache after each operation")
+var confirmRequired = flag.Bool("confirm", false, "Require user confirmation before signing (or set WCSA_CONFIRM=1)")
 
 func installService() {
 	if !utils.IsAdmin() {
@@ -126,6 +127,7 @@ func main() {
 	flag.Parse()
 	utils.SetProcessSystemDpiAware()
 	initDebugLog()
+	utils.ConfirmRequired = *confirmRequired || os.Getenv("WCSA_CONFIRM") == "1"
 	if *installHVService {
 		installService()
 		return
@@ -191,6 +193,11 @@ func main() {
 
 	// show systray
 	menu.menu.Sep()
+	if utils.ConfirmRequired {
+		menu.menu.Item("[✓] Require Confirm", app.MENU_CONFIRM_TOGGLE)
+	} else {
+		menu.menu.Item("[ ] Require Confirm", app.MENU_CONFIRM_TOGGLE)
+	}
 	menu.menu.Item("Quit", app.MENU_QUIT)
 	err = sysTray.Add()
 	if err != nil {
@@ -205,7 +212,16 @@ func main() {
 			if clicked.ID == app.MENU_QUIT {
 				goto cleanup
 			}
-			menu.Handle(app.AppId(clicked.ID))
+			if clicked.ID == app.MENU_CONFIRM_TOGGLE {
+				utils.ConfirmRequired = !utils.ConfirmRequired
+				if utils.ConfirmRequired {
+					utils.Notify("Settings", "Signing confirmation enabled")
+				} else {
+					utils.Notify("Settings", "Signing confirmation disabled")
+				}
+			} else {
+				menu.Handle(app.AppId(clicked.ID))
+			}
 		case <-sysTray.Balloon:
 			continue
 		case <-quit:
