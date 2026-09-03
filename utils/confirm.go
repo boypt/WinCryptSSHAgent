@@ -1,11 +1,50 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+
+	"golang.org/x/sys/windows/registry"
+)
 
 // ConfirmRequired controls whether signing requests require user confirmation.
-// When false (default), signing proceeds automatically (backward-compatible).
-// When true, a blocking dialog is shown before each signing operation.
+// When false (default), signing proceeds automatically (Auto Confirm).
+// When true, a blocking dialog is shown before each signing operation (Manual Confirm).
 var ConfirmRequired bool
+
+// confirmRegPath is the HKCU registry key holding the persisted confirm state.
+const confirmRegPath = `Software\WinCryptSSHAgent`
+
+// confirmRegName is the DWORD value (0 = auto, 1 = manual) storing the state.
+const confirmRegName = "ConfirmRequired"
+
+// LoadConfirmFromRegistry reads the persisted confirm state. It returns the
+// value and whether a value was actually present in the registry.
+func LoadConfirmFromRegistry() (bool, bool) {
+	key, err := registry.OpenKey(registry.CURRENT_USER, confirmRegPath, registry.QUERY_VALUE)
+	if err != nil {
+		return false, false
+	}
+	defer key.Close()
+	val, _, err := key.GetIntegerValue(confirmRegName)
+	if err != nil {
+		return false, false
+	}
+	return val != 0, true
+}
+
+// SaveConfirmToRegistry persists the confirm state so it survives restarts.
+func SaveConfirmToRegistry(manual bool) {
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, confirmRegPath, registry.SET_VALUE)
+	if err != nil {
+		return
+	}
+	defer key.Close()
+	val := uint64(0)
+	if manual {
+		val = 1
+	}
+	_ = key.SetDWordValue(confirmRegName, uint32(val))
+}
 
 // RequestConfirm shows a blocking Yes/No dialog and returns true if the user
 // clicked Yes.

@@ -19,7 +19,8 @@ const (
 	APP_PUBKEY
 	APP_WSL2
 	MENU_QUIT
-	MENU_CONFIRM_TOGGLE
+	MENU_CONFIRM_MANUAL
+	MENU_CONFIRM_AUTO
 )
 
 type Application interface {

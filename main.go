@@ -127,7 +127,17 @@ func main() {
 	flag.Parse()
 	utils.SetProcessSystemDpiAware()
 	initDebugLog()
-	utils.ConfirmRequired = *confirmRequired || os.Getenv("WCSA_CONFIRM") == "1"
+	// Confirm mode resolution: explicit flag/env wins; otherwise fall back to the
+	// persisted registry state; otherwise default to Auto Confirm.
+	manualConfirm := *confirmRequired || os.Getenv("WCSA_CONFIRM") == "1"
+	if manualConfirm {
+		utils.ConfirmRequired = true
+		utils.SaveConfirmToRegistry(true)
+	} else if regVal, ok := utils.LoadConfirmFromRegistry(); ok {
+		utils.ConfirmRequired = regVal
+	} else {
+		utils.ConfirmRequired = false
+	}
 	if *installHVService {
 		installService()
 		return
@@ -175,7 +185,6 @@ func main() {
 	// application
 	wg := new(sync.WaitGroup)
 	for _, v := range applications {
-		v.Menu(menu.Register)
 		wg.Add(1)
 		go func(application app.Application) {
 			handler := server.SSHAgentHandlerWithSource(application.AppId().FullName())
@@ -191,14 +200,27 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
-	// show systray
-	menu.menu.Sep()
-	if utils.ConfirmRequired {
-		menu.menu.Item("[✓] Require Confirm", app.MENU_CONFIRM_TOGGLE)
-	} else {
-		menu.menu.Item("[ ] Require Confirm", app.MENU_CONFIRM_TOGGLE)
+	// buildMenu (re)builds the tray menu so the "•" marker always reflects the
+	// current confirm mode. CreateMenu replaces the notifier's item list, which
+	// the library turns into a fresh native popup on every right-click.
+	buildMenu := func() {
+		menu.menu = sysTray.CreateMenu()
+		for _, v := range applications {
+			v.Menu(menu.Register)
+		}
+		menu.menu.Sep()
+		if utils.ConfirmRequired {
+			menu.menu.Item("• Manual Confirm", app.MENU_CONFIRM_MANUAL)
+			menu.menu.Item("  Auto Confirm", app.MENU_CONFIRM_AUTO)
+		} else {
+			menu.menu.Item("  Manual Confirm", app.MENU_CONFIRM_MANUAL)
+			menu.menu.Item("• Auto Confirm", app.MENU_CONFIRM_AUTO)
+		}
+		menu.menu.Item("Quit", app.MENU_QUIT)
 	}
-	menu.menu.Item("Quit", app.MENU_QUIT)
+
+	// show systray
+	buildMenu()
 	err = sysTray.Add()
 	if err != nil {
 		utils.MessageBox("Error:", err.Error(), utils.MB_ICONERROR)
@@ -212,13 +234,14 @@ func main() {
 			if clicked.ID == app.MENU_QUIT {
 				goto cleanup
 			}
-			if clicked.ID == app.MENU_CONFIRM_TOGGLE {
-				utils.ConfirmRequired = !utils.ConfirmRequired
-				if utils.ConfirmRequired {
-					utils.Notify("Settings", "Signing confirmation enabled")
-				} else {
-					utils.Notify("Settings", "Signing confirmation disabled")
-				}
+			if clicked.ID == app.MENU_CONFIRM_MANUAL {
+				utils.ConfirmRequired = true
+				utils.SaveConfirmToRegistry(true)
+				buildMenu()
+			} else if clicked.ID == app.MENU_CONFIRM_AUTO {
+				utils.ConfirmRequired = false
+				utils.SaveConfirmToRegistry(false)
+				buildMenu()
 			} else {
 				menu.Handle(app.AppId(clicked.ID))
 			}
