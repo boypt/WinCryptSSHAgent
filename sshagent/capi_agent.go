@@ -129,6 +129,11 @@ func (s *CAPIAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error)
 }
 
 func (s *CAPIAgent) signed(comment, source string) {
+	// Manual Confirm 已弹窗告知用户，跳过通知 / the confirm dialog already
+	// informed the user, so skip the "Authenticated" toast.
+	if utils.ConfirmRequired {
+		return
+	}
 	title := "Authenticated"
 	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {

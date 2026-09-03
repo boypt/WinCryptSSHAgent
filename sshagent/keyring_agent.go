@@ -142,6 +142,11 @@ func (s *KeyRingAgent) Signers() ([]ssh.Signer, error) {
 }
 
 func (s *KeyRingAgent) signed(comment, source string) {
+	// Manual Confirm 已弹窗告知用户，跳过通知 / the confirm dialog already
+	// informed the user, so skip the "Authenticated" toast.
+	if utils.ConfirmRequired {
+		return
+	}
 	title := "Authenticated (Keyring)"
 	msg := fmt.Sprintf("Key: <%s>", comment)
 	if source != "" {
