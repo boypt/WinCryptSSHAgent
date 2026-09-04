@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"runtime"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -49,6 +50,14 @@ func SaveConfirmToRegistry(manual bool) {
 // RequestConfirm shows a blocking Yes/No dialog and returns true if the user
 // clicked Yes.
 func RequestConfirm(title, message string) bool {
+	// We run as a background tray process, so Windows may show the dialog
+	// without giving it keyboard focus. Pin this goroutine to its OS thread
+	// so the watcher can identify the dialog created by the blocking call
+	// below (concurrent requests each raise their own dialog), then force
+	// it to the foreground.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	raiseDialogWhenShown(currentThreadId())
 	style := uintptr(MB_YESNO | MB_USERICON | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
 	ret := MessageBoxIndirect(title, message, style, 1)
 	if ret == 0 {
