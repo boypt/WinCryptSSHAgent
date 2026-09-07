@@ -268,9 +268,13 @@ cleanup:
 }
 
 func initSystray(hv bool) (notify.Notifier, error) {
-	icon, err := notification.LoadIcon(1)
+	// 2 is the app icon resource.
+	icon, err := notification.LoadIcon(2)
 	if err != nil {
-		return nil, err
+		icon, err = notification.LoadIcon(1)
+		if err != nil {
+			return nil, err
+		}
 	}
 	title := fmt.Sprintf("%s %s _ %s", agentTitle, agentVersion, agentBuildTime)
 	if hv {

@@ -39,5 +39,5 @@
         }
     },
     "IconPath": "",
-    "ManifestPath": ""
+    "ManifestPath": "app.manifest"
 }
