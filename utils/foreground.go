@@ -15,11 +15,60 @@ var (
 	procIsWindowVisible          = moduser32.NewProc("IsWindowVisible")
 	procEnumThreadWindows        = moduser32.NewProc("EnumThreadWindows")
 	procGetClassNameW            = moduser32.NewProc("GetClassNameW")
+	procLoadImage                = moduser32.NewProc("LoadImageW")
+	procSendMessage              = moduser32.NewProc("SendMessageW")
+	procGetSystemMetrics         = moduser32.NewProc("GetSystemMetrics")
 	procGetCurrentThreadId       = modkernel32.NewProc("GetCurrentThreadId")
 )
 
 // dialogClassName is the standard Win32 class of message-box / dialog windows.
 const dialogClassName = "#32770"
+
+const (
+	WM_SETICON = 0x0080
+	ICON_SMALL = 0
+	ICON_BIG   = 1
+	IMAGE_ICON = 1
+	LR_SHARED  = 0x8000
+	SM_CXICON  = 11
+	SM_CYICON  = 12
+)
+
+// loadSharedAppIcon loads the app's own icon resource as a shared icon.
+func loadSharedAppIcon() uintptr {
+	hInst, _, _ := procGetModuleHandle.Call(0)
+	if hInst == 0 {
+		return 0
+	}
+	// Standard icon size, with 32x32 fallback.
+	cx, _, _ := procGetSystemMetrics.Call(SM_CXICON)
+	cy, _, _ := procGetSystemMetrics.Call(SM_CYICON)
+	if cx == 0 {
+		cx = 32
+	}
+	if cy == 0 {
+		cy = 32
+	}
+	// Try the post-manifest id first, then the legacy id.
+	for _, id := range []uintptr{2, 1} {
+		hIcon, _, _ := procLoadImage.Call(hInst, id, IMAGE_ICON, cx, cy, LR_SHARED)
+		if hIcon != 0 {
+			return hIcon
+		}
+	}
+	return 0
+}
+
+// setDialogIcon sets the dialog caption icon to the app's own icon.
+func setDialogIcon(hwnd uintptr) {
+	hIcon := loadSharedAppIcon()
+	if hIcon == 0 {
+		return
+	}
+	// LR_SHARED icon needs no cleanup.
+	procSendMessage.Call(hwnd, WM_SETICON, ICON_SMALL, hIcon)
+	procSendMessage.Call(hwnd, WM_SETICON, ICON_BIG, hIcon)
+}
 
 // currentThreadId returns the Win32 thread id of the OS thread the caller is
 // executing on.
@@ -67,6 +116,7 @@ func raiseDialogWhenShown(threadID uintptr) {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
 			if hwnd := findDialog(); hwnd != 0 {
+				setDialogIcon(hwnd)
 				forceForegroundWindow(hwnd)
 				// Re-raise shortly after: the message box may still be
 				// finishing its own activation and swallow the first raise.
@@ -74,6 +124,7 @@ func raiseDialogWhenShown(threadID uintptr) {
 				// dialog was dismissed and the HWND reused in the meantime.
 				time.Sleep(50 * time.Millisecond)
 				if hwnd := findDialog(); hwnd != 0 {
+					setDialogIcon(hwnd)
 					forceForegroundWindow(hwnd)
 				}
 				return

@@ -37,6 +37,15 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 - `WCSA_CHECKSVR=1` → before each CAPI signing, warns if the Smart Card service is stopped and offers to restart it.
 - Confirm mode: `-confirm` flag or `WCSA_CONFIRM=1` forces Manual Confirm and writes the registry; otherwise state loads from `HKCU\Software\WinCryptSSHAgent` DWORD `ConfirmRequired` (absent → Auto). Manual = blocking Yes/No dialog per signing and the "Authenticated" toast is suppressed; Auto = silent signing + toast.
 
+## Dialogs (confirm UI)
+
+- Confirm dialog = `MessageBox` (`MessageBoxIndirect` with `MB_USERICON` + plain-`MessageBox` fallback in `utils/confirm.go`). `TaskDialogIndirect` was tried and reverted — its popup is noticeably slower. Keep the manifest anyway: Common-Controls v6 gives `MessageBox` modern visuals for free.
+- Manifest wiring: `versioninfo.json` `ManifestPath` = `app.manifest` (Common-Controls 6.0), embedded by `goversioninfo` during `go generate`. It must be committed — `build.sh`'s EXIT trap reverts uncommitted `versioninfo.json` locally, silently dropping the manifest on the next generate.
+- goversioninfo id quirk: the manifest occupies resource id 1, shifting the icon group from id 1 to id 2. All icon loads handle both layouts: `initSystray` tries `LoadIcon(2)` then `LoadIcon(1)`; `messageBoxConfirm` tries iconResId 2, then 1, then plain `MessageBox`.
+- Caption icon: `MessageBox` resolves the title-bar icon as exe icon id 1 and falls back to the generic `IDI_APPLICATION` icon after the shift. The foreground watcher (`utils/foreground.go`) sets `WM_SETICON` (`ICON_SMALL` + `ICON_BIG`) with the app icon (ids {2,1}, `LR_SHARED`) once the dialog appears.
+- Focus: a background tray process cannot rely on `MB_SETFOREGROUND` (foreground-lock no-op). `raiseDialogWhenShown` pins the OS thread, finds the `#32770` dialog via `EnumThreadWindows`, and forces foreground via temporary `AttachThreadInput`. Applies to any thread-owned modal dialog.
+- Debugging dialogs from Linux (cannot run): inspect PE resources (e.g. throwaway `debug/pe` lister) for `RT_GROUP_ICON` / `RT_MANIFEST` ids; `WCSA_DEBUG=1` log captures Win32 `HRESULT`s.
+
 ## Conventions
 
 - Per README: use GitHub issues for everything; discuss non-trivial changes in an issue before a PR.
