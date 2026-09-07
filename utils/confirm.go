@@ -48,8 +48,7 @@ func SaveConfirmToRegistry(manual bool) {
 }
 
 // RequestConfirm shows a blocking Yes/No dialog and returns true if the user
-// clicked Yes. It first tries the modern TaskDialog and falls back to the
-// legacy MessageBox path when TaskDialog is unavailable.
+// clicked Yes.
 func RequestConfirm(title, message string) bool {
 	// We run as a background tray process, so Windows may show the dialog
 	// without giving it keyboard focus. Pin this goroutine to its OS thread
@@ -59,55 +58,32 @@ func RequestConfirm(title, message string) bool {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	raiseDialogWhenShown(currentThreadId())
-	// TaskDialog still uses the #32770 dialog class, so the watcher above
-	// needs no change.
-	if ret := TaskDialog(title, "Allow this SSH signing request?", message, "", ""); ret == IDYES || ret == IDNO {
-		return ret == IDYES
-	}
 	return messageBoxConfirm(title, message)
 }
 
-// messageBoxConfirm is the legacy MessageBoxIndirect + MessageBox fallback
-// used when TaskDialog is unavailable or fails.
+// messageBoxConfirm shows the dialog with the app icon, trying icon id 2
+// (manifested build) then id 1, then a plain MessageBox.
 func messageBoxConfirm(title, message string) bool {
 	style := uintptr(MB_YESNO | MB_USERICON | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
 	// 2 is the app icon resource.
-	ret := MessageBoxIndirect(title, message, style, 2)
-	if ret == 0 {
-		// Fallback to standard MessageBox in case icon loading fails
-		fallbackStyle := uintptr(MB_YESNO | MB_ICONQUESTION | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
-		ret = MessageBox(title, message, fallbackStyle)
+	if ret := MessageBoxIndirect(title, message, style, 2); ret != 0 {
+		return ret == IDYES
 	}
-	return ret == IDYES
+	if ret := MessageBoxIndirect(title, message, style, 1); ret != 0 {
+		return ret == IDYES
+	}
+	// Fallback to standard MessageBox in case icon loading fails
+	fallbackStyle := uintptr(MB_YESNO | MB_ICONQUESTION | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND)
+	return MessageBox(title, message, fallbackStyle) == IDYES
 }
 
 // ConfirmSign builds a signing-confirmation dialog for the given key info and
 // source, then blocks until the user authorises or denies.
 func ConfirmSign(comment, fingerprint, source string) bool {
-	// We run as a background tray process, so Windows may show the dialog
-	// without giving it keyboard focus. Pin this goroutine to its OS thread
-	// so the watcher can identify the dialog created by the blocking call
-	// below (concurrent requests each raise their own dialog), then force
-	// it to the foreground.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	raiseDialogWhenShown(currentThreadId())
-	content := "Key: " + comment
-	if source != "" {
-		content += "\nSource: " + source
-	}
-	expandedInfo := "Fingerprint: " + fingerprint
-	footer := ""
-	if source != "" {
-		footer = "Source: " + source
-	}
-	if ret := TaskDialog("SSH Signing Request", "Allow this SSH signing request?", content, expandedInfo, footer); ret == IDYES || ret == IDNO {
-		return ret == IDYES
-	}
 	msg := fmt.Sprintf("SSH signing request:\nKey: %s [%s]", comment, fingerprint)
 	if source != "" {
 		msg += fmt.Sprintf("\nSource: %s", source)
 	}
 	msg += "\n\nDo you want to authorise this signing?"
-	return messageBoxConfirm("SSH Signing Request", msg)
+	return RequestConfirm("SSH Signing Request", msg)
 }
