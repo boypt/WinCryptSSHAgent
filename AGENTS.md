@@ -17,7 +17,7 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 
 ## Release
 
-- Git remotes: `origin` = upstream `buptczq/WinCryptSSHAgent` (no push access), `pt` = fork `boypt/WinCryptSSHAgent` (the push target; `master` tracks `pt`). Push tags with `git push pt v*`, never `git push origin` (permission denied).
+- Git remotes: `origin` = upstream `buptczq/WinCryptSSHAgent` (no push access), `pt` = fork `boypt/WinCryptSSHAgent` (the push target; `master` tracks `pt`). Release flow: `git push pt master` first, then create the lightweight tag (`git tag vX.Y.Z`) and `git push pt v*` — never `git push origin` (permission denied). CI only needs the tag (it checks out the tag ref with full history), but mainline must be pushed explicitly: pushing a tag uploads the commits without moving the remote `master` ref.
 - CI (`.github/workflows/go.yml`) triggers only on pushing a `v*` tag: builds amd64 only via `build.sh` and uploads `WinCryptSSHAgent*.exe` to a **prerelease**. Full git history is fetched because the version derives from `git describe`.
 - House style after CI: edit the release to a formal/latest one with notes, e.g. `gh release edit v1.1.14 --notes-file <md> --prerelease=false --latest`. Tags are lightweight.
 
