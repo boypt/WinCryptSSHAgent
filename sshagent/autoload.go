@@ -155,5 +155,12 @@ func AutoLoadKeys(keyring *KeyRingAgent) {
 	for _, f := range files {
 		_ = AddKeyFile(keyring, f, "AutoLoad")
 	}
+	// WCSA_ASKPASS is only honored during startup auto-load; clear it so later
+	// manual imports (tray Import Key…) don't silently invoke the helper.
+	if err := os.Unsetenv("WCSA_ASKPASS"); err != nil {
+		log.Printf("autoload: unset WCSA_ASKPASS failed: %v", err)
+	} else {
+		log.Printf("autoload: cleared WCSA_ASKPASS for subsequent imports")
+	}
 	log.Printf("autoload: done")
 }

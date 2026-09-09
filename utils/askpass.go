@@ -19,7 +19,7 @@ const maxAskPassOutput = 1023
 // killed and treated as cancel.
 const askPassTimeout = 60 * time.Second
 
-// AskPassOutcome describes how an SSH_ASKPASS helper invocation ended.
+// AskPassOutcome describes how a WCSA_ASKPASS helper invocation ended.
 type AskPassOutcome int
 
 const (
@@ -35,17 +35,17 @@ const (
 	AskPassCancelled
 )
 
-// RunAskPass runs the SSH_ASKPASS helper for prompt and returns its password
-// output. Simplified gating: if SSH_ASKPASS is set, the helper is used — no
+// RunAskPass runs the WCSA_ASKPASS helper for prompt and returns its password
+// output. Simplified gating: if WCSA_ASKPASS is set, the helper is used — no
 // DISPLAY/WAYLAND/SSH_ASKPASS_REQUIRE checks. The helper is invoked as
 // [prog, prompt] with the full environment inherited and stdin on DevNull;
 // output is truncated at 1023 bytes and at the first \r or \n, and the
 // invocation is killed after 60s. Password content itself is never logged,
 // only lengths and outcomes.
 func RunAskPass(prompt string) (string, AskPassOutcome) {
-	prog := os.Getenv("SSH_ASKPASS")
+	prog := os.Getenv("WCSA_ASKPASS")
 	if prog == "" {
-		log.Printf("askpass: SSH_ASKPASS not set, skip (prompt=%q)", prompt)
+		log.Printf("askpass: WCSA_ASKPASS not set, skip (prompt=%q)", prompt)
 		return "", AskPassUnavailable
 	}
 	path, err := exec.LookPath(prog)
