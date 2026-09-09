@@ -26,9 +26,7 @@ jobs:
       run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
     - name: Build
-      run: |
-        chmod +x build.sh
-        ./build.sh all
+      run: make all
 
     - name: Upload Release
       uses: softprops/action-gh-release@v3

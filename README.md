@@ -8,7 +8,7 @@
 - **Signing confirmation** — the tray menu offers `Manual Confirm` / `Auto Confirm` (a `•` marks the current mode). In Manual mode a blocking dialog is shown before each signing operation. The choice is persisted in the registry (`HKCU\Software\WinCryptSSHAgent`) and survives restarts; `-confirm` or `WCSA_CONFIRM=1` forces Manual mode at startup and overrides the registry.
 - **Instant & graceful shutdown** — all listeners cleanly unblock on exit; single-instance mutex prevents conflicts.
 - **Improved protocol support** — better XShell 5/7/8 Xagent compatibility (by zzmark); Hyper-V VSock migrated from deprecated `linuxkit/virtsock` to `go-winio`.
-- **Automated build & versioning** — `build.sh` produces multi-arch binaries with Git-tag-derived version, commit hash, and build date injected at link time; dependencies upgraded.
+- **Automated build & versioning** — `make` produces multi-arch binaries with Git-tag-derived version, commit hash, and build date injected at link time; dependencies upgraded.
 
 ## Introduction
 
