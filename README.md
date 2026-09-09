@@ -12,38 +12,38 @@
 
 ## Introduction
 
-A SSH Agent based-on Windows CryptoAPI.
+Windows applications use several incompatible SSH agent interfaces. Native OpenSSH clients use a Windows named pipe, PuTTY-family applications use the Pageant protocol, Git for Windows, MSYS2 and Cygwin use a Cygwin-compatible socket, XShell uses its own Xagent protocol — and WSL clients arrive over Unix sockets and Hyper-V vsock.
 
-This project allows other programs to access SSH keys stored in your Windows Certificate Store for authentication.
-
-Benefit by Windows Certificate Management, this project natively supports the use of windows user certificates or smart cards, e.g., Yubikey PIV, for authentication.
+WinCryptSSHAgent connects all of these client interfaces to your keys in one place, so a single agent serves every client. Keys come from the Windows Certificate Store — user certificates and smart cards such as Yubikey PIV work natively without installing any driver — or from an in-memory keyring (auto-loaded `~/.ssh` keys and tray imports, never written to disk). It runs as a notification-area application.
 
 ## Overview
 ![Overview](overview.svg)
 
 ## Feature
 
+* One agent for fragmented Windows clients: named pipe, Pageant, Cygwin socket, XShell Xagent, WSL and Hyper-V vsock
 * Work with smart cards natively without installing any driver in Windows (PIV only)
 * Support for OpenSSH certificates (so you can use your smart card with an additional OpenSSH certificate)
+* In-memory keyring backend: imported keys live only in process memory, never persisted
 * Good compatibility
 
 ## Compatibility
 
-There are many different OpenSSH agent implementations in Windows. This project implements five popular protocols in Windows:
+There are many different, mutually incompatible SSH agent interfaces on Windows. This project implements the popular ones side by side:
 
-* Cygwin UNIX Socket
-* Windows UNIX Socket (Windows 10 1803 or later)
-* Named pipe
-* Pageant SSH Agent Protocol
-* XShell Xagent Protocol
+* Windows OpenSSH named pipe
+* Pageant SSH agent protocol
+* Cygwin / MSYS2 socket
+* WSL (Unix socket and Hyper-V vsock)
+* XShell Xagent protocol
 
-With the support of these protocols, this project is compatible with most SSH clients in Windows. For example:
+With all of these served by one running agent, this project is compatible with most SSH clients in Windows. For example:
 
 * Git for Windows
 * Windows Subsystem for Linux
 * Windows OpenSSH
-* Putty
-* Jetbrains
+* PuTTY
+* JetBrains
 * SecureCRT
 * XShell
 * Cygwin
@@ -52,17 +52,11 @@ With the support of these protocols, this project is compatible with most SSH cl
 
 ## Installing
 
-### Install with Chocolatey
-
-```
-choco install wincrypt-sshagent
-```
-
 ### Manually Install
 
 Stable versions can be obtained from the release page. 
 
-Additionally, you may make an shortcut of this application to the startup folder.
+Additionally, you may make a shortcut of this application to the startup folder.
 
 ## Usage
 
