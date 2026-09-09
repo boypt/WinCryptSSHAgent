@@ -61,6 +61,16 @@ func RequestConfirm(title, message string) bool {
 	return messageBoxConfirm(title, message)
 }
 
+// MessageBoxForeground shows a plain MessageBox pinned to the current OS
+// thread with the foreground watcher, mirroring RequestConfirm, and returns
+// the MessageBox result (IDOK, IDCANCEL, ...).
+func MessageBoxForeground(title, message string, style uintptr) int {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	raiseDialogWhenShown(currentThreadId())
+	return MessageBox(title, message, style)
+}
+
 // messageBoxConfirm shows the dialog with the app icon, trying icon id 2
 // (manifested build) then id 1, then a plain MessageBox.
 func messageBoxConfirm(title, message string) bool {

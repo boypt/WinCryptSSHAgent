@@ -9,8 +9,8 @@ import (
 )
 
 // CredUI prompt flags for a password-only generic credential dialog:
-// non-domain credential, username field hidden, no certificate picker,
-// and nothing is ever persisted.
+// non-domain credential, username field pre-filled and locked, no
+// certificate picker, and nothing is ever persisted.
 const (
 	credUIFlagsGenericCredentials  = 0x40000
 	credUIFlagsKeepUsername        = 0x100000
@@ -46,13 +46,27 @@ func uptr(p interface{}) uintptr {
 }
 
 // PromptPassphrase shows the system credential dialog (credui.dll, with
-// password masking) and returns the entered password. It returns ok=false
-// when the user cancels or the dialog fails.
-func PromptPassphrase(caption, message string) (password string, ok bool) {
+// password masking) and returns the entered password. username pre-fills the
+// locked username field so initial focus lands in the password box. It
+// returns ok=false when the user cancels or the dialog fails.
+func PromptPassphrase(caption, message, username string) (password string, ok bool) {
+	// We run as a background tray process, so Windows may show the dialog
+	// without giving it keyboard focus. Pin this goroutine to its OS thread
+	// so the watcher can identify the dialog created by the blocking call
+	// below, then force it to the foreground (mirrors RequestConfirm).
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	capPtr := syscall.StringToUTF16Ptr(caption)
 	msgPtr := syscall.StringToUTF16Ptr(message)
 	targetPtr := syscall.StringToUTF16Ptr("WinCryptSSHAgent")
 	var userBuf [credUIMaxUsernameLength]uint16
+	if u16, err := syscall.UTF16FromString(username); err == nil {
+		if len(u16) > len(userBuf) {
+			u16 = u16[:len(userBuf)]
+			u16[len(u16)-1] = 0
+		}
+		copy(userBuf[:], u16)
+	}
 	var passBuf [credUIMaxPasswordLength]uint16
 	var save uint32
 	info := credUIInfo{
@@ -60,6 +74,7 @@ func PromptPassphrase(caption, message string) (password string, ok bool) {
 		captionText: capPtr,
 	}
 	info.cbSize = uint32(reflect.TypeOf(info).Size())
+	raiseDialogWhenShown(currentThreadId())
 	ret, _, _ := procCredUIPromptForCredentialsW.Call(
 		uptr(&info),
 		uptr(targetPtr),

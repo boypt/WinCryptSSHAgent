@@ -24,6 +24,11 @@ import (
 // sessionPassphrases (keyring Add and Notify have their own mutexes).
 var importMu sync.Mutex
 
+// ErrDecryptFailed marks a key that had a passphrase but still failed to
+// decrypt. Callers use errors.Is to tell it apart from cancellations and
+// read/parse errors.
+var ErrDecryptFailed = errors.New("decrypt failed")
+
 var sessionPassphrases []string // process-lifetime cache of successfully entered passphrases (memory only, never persisted or logged)
 
 func ParseKeyFile(path string) (agent.AddedKey, error) {
@@ -64,7 +69,7 @@ func ParseKeyFile(path string) (agent.AddedKey, error) {
 		case utils.AskPassUnavailable:
 			// Helper never ran; fall through to CredUI unchanged.
 		}
-		pp, ok := utils.PromptPassphrase("Import Key", promptMsg)
+		pp, ok := utils.PromptPassphrase("Import Key", promptMsg, keyName)
 		if !ok {
 			return agent.AddedKey{}, err
 		}
@@ -72,7 +77,7 @@ func ParseKeyFile(path string) (agent.AddedKey, error) {
 			sessionPassphrases = append(sessionPassphrases, pp)
 			return agent.AddedKey{PrivateKey: k, Comment: base}, nil
 		} else {
-			return agent.AddedKey{}, perr
+			return agent.AddedKey{}, fmt.Errorf("%w for <%s>: %v", ErrDecryptFailed, base, perr)
 		}
 	}
 	return agent.AddedKey{PrivateKey: key, Comment: filepath.Base(path)}, nil
@@ -112,14 +117,19 @@ func DefaultKeyFiles() []string {
 }
 
 // AddKeyFile parses path with ParseKeyFile and adds it to ag, tagging Source.
-// Unparseable / undecryptable files are skipped with a toast, never blocking.
+// Decrypt failures show a warning dialog; other failures (cancelled, read or
+// parse errors) are skipped with a toast, never blocking.
 func AddKeyFile(ag agent.Agent, path, source string) error {
 	importMu.Lock()
 	defer importMu.Unlock()
 	key, err := ParseKeyFile(path)
 	if err != nil {
 		log.Printf("autoload: skip <%s> source=%s: %v", filepath.Base(path), source, err)
-		utils.Notify("Import Key", fmt.Sprintf("Skipped <%s>: %v", filepath.Base(path), err))
+		if errors.Is(err, ErrDecryptFailed) {
+			utils.MessageBoxForeground("Import Key", fmt.Sprintf("Could not unlock key:\n%v", err), utils.MB_ICONWARNING)
+		} else {
+			utils.Notify("Import Key", fmt.Sprintf("Skipped <%s>: %v", filepath.Base(path), err))
+		}
 		return err
 	}
 	if n, ok := ag.(SourceNotifier); ok {
@@ -136,8 +146,9 @@ func AddKeyFile(ag agent.Agent, path, source string) error {
 }
 
 // AutoLoadKeys imports DefaultKeyFiles into keyring once at startup.
-// Encrypted keys fall back to an interactive passphrase prompt; cancelled or
-// still-failing keys are skipped with a toast and never block other files.
+// Encrypted keys fall back to an interactive passphrase prompt; cancelled
+// keys are skipped with a toast, decrypt failures show a warning dialog,
+// and neither blocks other files.
 func AutoLoadKeys(keyring *KeyRingAgent) {
 	files := DefaultKeyFiles()
 	log.Printf("autoload: start, %d file(s)", len(files))
