@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"net"
 	"context"
+	"net"
 
 	"github.com/Microsoft/go-winio"
 )
@@ -14,13 +14,10 @@ const (
 
 var HyperVServiceGUID = winio.VsockServiceID(servicePort)
 
-func ConnectHyperV() (net.Conn, error) {
+// ConnectHyperV dials the parent VM's vsock service. The caller supplies ctx
+// to control timeout and cancellation; pass context.Background() for a
+// blocking dial with no deadline.
+func ConnectHyperV(ctx context.Context) (net.Conn, error) {
 	addr := winio.HvsockAddr{VMID: winio.HvsockGUIDParent(), ServiceID: HyperVServiceGUID}
-
-	// would it better to pass context from upper action ?
-	conn, err := winio.Dial(context.Background(), &addr)
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
+	return winio.Dial(ctx, &addr)
 }

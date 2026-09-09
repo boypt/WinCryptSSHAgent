@@ -146,7 +146,9 @@ func main() {
 	}
 	// hyper-v
 	hvClient := false
-	hvConn, err := utils.ConnectHyperV()
+	hvCtx, hvCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	hvConn, err := utils.ConnectHyperV(hvCtx)
+	hvCancel()
 	if err == nil {
 		hvConn.Close()
 		hvClient = true

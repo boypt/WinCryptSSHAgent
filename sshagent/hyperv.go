@@ -1,11 +1,16 @@
 package sshagent
 
 import (
+	"context"
 	"fmt"
+	"time"
+
 	"github.com/buptczq/WinCryptSSHAgent/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
+
+const hvDialTimeout = 5 * time.Second
 
 type HVAgent struct {
 }
@@ -15,7 +20,9 @@ func NewHVAgent() *HVAgent {
 }
 
 func (s *HVAgent) List() ([]*agent.Key, error) {
-	conn, err := utils.ConnectHyperV()
+	ctx, cancel := context.WithTimeout(context.Background(), hvDialTimeout)
+	defer cancel()
+	conn, err := utils.ConnectHyperV(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +32,9 @@ func (s *HVAgent) List() ([]*agent.Key, error) {
 }
 
 func (s *HVAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
-	conn, err := utils.ConnectHyperV()
+	ctx, cancel := context.WithTimeout(context.Background(), hvDialTimeout)
+	defer cancel()
+	conn, err := utils.ConnectHyperV(ctx)
 	if err != nil {
 		return nil, err
 	}
