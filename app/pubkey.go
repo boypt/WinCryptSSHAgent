@@ -6,7 +6,6 @@ import (
 
 	"github.com/buptczq/WinCryptSSHAgent/sshagent"
 	"github.com/buptczq/WinCryptSSHAgent/utils"
-	"github.com/sqweek/dialog"
 	"golang.org/x/crypto/ssh/agent"
 )
 
@@ -53,8 +52,8 @@ func (s *PubKeyView) onImport() {
 	// Async so the file dialog and passphrase helpers never block the
 	// tray event loop; AddKeyFile serializes concurrent imports itself.
 	go func() {
-		path, err := dialog.File().Title("Import Private Key").Load()
-		if err != nil || path == "" {
+		path, ok := utils.OpenFileDialog("Import Private Key")
+		if !ok || path == "" {
 			return // cancelled
 		}
 		// Same file→AddedKey logic as startup auto-load; encrypted keys are tried

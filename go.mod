@@ -7,13 +7,11 @@ require (
 	github.com/bi-zone/wmi v1.1.4
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/hattya/go.notify v0.1.0
-	github.com/sqweek/dialog v0.0.0-20260123140253-64c163d53aac
 	golang.org/x/crypto v0.41.0
 	golang.org/x/sys v0.41.0
 )
 
 require (
-	github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf // indirect
 	github.com/bi-zone/go-ole v1.2.5 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
