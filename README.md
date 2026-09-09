@@ -117,3 +117,59 @@ Switch to **Manual Confirm** from the tray menu (`•` marks the current mode) t
   - Reporting issues
   - Suggesting new features or enhancements
   - Improve/fix documentation
+
+## Advanced User Manual
+
+### Environment variables
+
+| Variable | Effect |
+|---|---|
+| `WCSA_DEBUG=1` | Append stdout/stderr to `%USERPROFILE%\WCSA_DEBUG.log` (the binary has no console window). |
+| `WCSA_CONFIRM=1` | Force Manual Confirm; overwrites the registry value. |
+| `WCSA_KEYS` | Extra private-key files to auto-load, separated by `;` on Windows. |
+| `WCSA_KEY_PASSPHRASE` | Single passphrase tried for all encrypted keys (memory only, never logged). |
+| `WCSA_CHECKSVR=1` | Before CAPI signing, warn if the Smart Card service is stopped and offer to start it. |
+| `SSH_ASKPASS` | Helper program run to obtain a key passphrase when needed. |
+| `SSH_AUTH_SOCK` | Standard client-side variable pointing at the agent endpoint (named pipe, `wincrypt-cygwin.sock`, …); each tray menu shows the value to export. |
+
+### Command-line flags
+
+Run `WinCryptSSHAgent.exe -h` for the full list.
+
+| Flag | Effect |
+|---|---|
+| `-i` | Install the Hyper-V guest communication service (requires elevation). |
+| `-confirm` | Force Manual Confirm (same as `WCSA_CONFIRM=1`). |
+| `-disable-capi` | Serve only the in-memory keyring, skip the Windows Certificate Store. |
+| `-disable-pin-cache` | Clear the smart-card PIN cache after each operation. |
+
+### Registry
+
+| Key | Purpose |
+|---|---|
+| `HKCU\Software\WinCryptSSHAgent` → DWORD `ConfirmRequired` | Persisted confirm mode (`0` = Auto, `1` = Manual; absent = Auto). Written on every toggle, `-confirm`, or `WCSA_CONFIRM=1`. |
+| `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices\<service-GUID>` | Hyper-V guest service registration written by `-i` (requires admin). |
+
+### Files
+
+- The binary lives wherever you put it (no installer). Socket files (`%USERPROFILE%\wincrypt-cygwin.sock`, `wincrypt-wsl.sock`) are created at startup and removed on exit; `%USERPROFILE%\WCSA_DEBUG.log` exists only with `WCSA_DEBUG=1`. Imported keys and passphrases live only in process memory and are never written to disk.
+
+### Complete uninstall
+
+Delete the exe (and the startup-folder shortcut if you made one), then run the following in PowerShell (an elevated prompt is only needed for the Hyper-V service key, i.e. if you ever ran `-i`):
+
+```powershell
+# Stop a running agent (or Quit it from the tray menu first).
+Stop-Process -Name WinCryptSSHAgent,WinCryptSSHAgent-arm64 -ErrorAction SilentlyContinue
+
+# Leftover socket files, debug log and settings.
+Remove-Item "$env:USERPROFILE\wincrypt-cygwin.sock", "$env:USERPROFILE\wincrypt-wsl.sock" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\WCSA_DEBUG.log" -ErrorAction SilentlyContinue
+Remove-Item HKCU:\Software\WinCryptSSHAgent -Recurse -ErrorAction SilentlyContinue
+
+# Hyper-V guest service registration (only present if you ever ran -i).
+$svcRoot = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Virtualization\GuestCommunicationServices'
+Get-ChildItem $svcRoot -ErrorAction SilentlyContinue |
+  Where-Object { (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).ElementName -eq 'WinCryptSSHAgent' } |
+  Remove-Item -Recurse
+```
