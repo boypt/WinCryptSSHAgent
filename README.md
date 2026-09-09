@@ -4,11 +4,11 @@
 
 ## Fork Enhancements
 
-- **Richer notifications** — toasts now tag the source transport channel (e.g. `[Pageant]`, `[WSL]`) and reliably display the app icon; icons are categorized by event type (auth, key added, key removed).
-- **Signing confirmation** — the tray menu offers `Manual Confirm` / `Auto Confirm` (a `•` marks the current mode). In Manual mode a blocking dialog is shown before each signing operation. The choice is persisted in the registry (`HKCU\Software\WinCryptSSHAgent`) and survives restarts; `-confirm` or `WCSA_CONFIRM=1` forces Manual mode at startup and overrides the registry.
-- **Instant & graceful shutdown** — all listeners cleanly unblock on exit; single-instance mutex prevents conflicts.
-- **Improved protocol support** — better XShell 5/7/8 Xagent compatibility (by zzmark); Hyper-V VSock migrated from deprecated `linuxkit/virtsock` to `go-winio`.
-- **Automated build & versioning** — `make` produces multi-arch binaries with Git-tag-derived version, commit hash, and build date injected at link time; dependencies upgraded.
+- **Self-service key import** — auto-load at startup plus tray import, no `ssh-add` needed.
+- **Signing confirmation** — Manual/Auto mode per signing request, persisted across restarts.
+- **Source-tagged notifications** — toasts show the requesting transport with categorized icons.
+- **Windows ARM64 builds** — amd64 + arm64 binaries from `make`, versioned from Git tags.
+- **Broader protocol support** — XShell Xagent compatibility, Hyper-V vsock, graceful shutdown.
 
 ## Introduction
 
