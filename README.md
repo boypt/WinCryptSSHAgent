@@ -156,7 +156,15 @@ Run `WinCryptSSHAgent.exe -h` for the full list.
 
 ### Complete uninstall
 
-Delete the exe (and the startup-folder shortcut if you made one), then run the following in PowerShell (an elevated prompt is only needed for the Hyper-V service key, i.e. if you ever ran `-i`):
+Remove the following:
+
+- The exe and the startup-folder shortcut if you made one.
+- Leftover socket files: `%USERPROFILE%\wincrypt-cygwin.sock` and `wincrypt-wsl.sock`.
+- `%USERPROFILE%\WCSA_DEBUG.log` (only exists with `WCSA_DEBUG=1`).
+- The settings key `HKCU\Software\WinCryptSSHAgent`.
+- The `WinCryptSSHAgent` service subkey under the Hyper-V `GuestCommunicationServices` key (only if you ever ran `-i`; needs elevation).
+
+Or run it all at once in PowerShell:
 
 ```powershell
 # Stop a running agent (or Quit it from the tray menu first).
