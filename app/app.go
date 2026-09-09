@@ -21,6 +21,7 @@ const (
 	MENU_QUIT
 	MENU_CONFIRM_MANUAL
 	MENU_CONFIRM_AUTO
+	APP_IMPORT
 )
 
 type Application interface {
@@ -41,6 +42,7 @@ var appIdToName = map[AppId]string{
 	APP_HYPERV:    "Hyper-V",
 	APP_PUBKEY:    "PubKey",
 	APP_WSL2:      "WSL2",
+	APP_IMPORT:    "Import",
 }
 
 var appIdToFullName = map[AppId]string{
@@ -53,6 +55,7 @@ var appIdToFullName = map[AppId]string{
 	APP_HYPERV:    "Hyper-V / WSL2",
 	APP_PUBKEY:    "Public Keys",
 	APP_WSL2:      "Windows Subsystem for Linux (WSL2)",
+	APP_IMPORT:    "Key Import",
 }
 
 func (id AppId) String() string {

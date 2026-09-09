@@ -2,6 +2,11 @@
 
 Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys over multiple SSH agent protocols. Fork of `buptczq/WinCryptSSHAgent` — module path is still `github.com/buptczq/WinCryptSSHAgent`; use that in imports.
 
+## Development Rules
+- Do not preserve backward compatibility.
+- Choose the simplest implementation that fully meets the current requirements.
+- Prefer established, well-maintained libraries over custom implementations.
+
 ## Build & verify
 
 - No test suite exists. Verification = a successful cross-compile + `go vet`. Do not invent `go test` expectations.
@@ -50,4 +55,5 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 
 - Per README: use GitHub issues for everything; discuss non-trivial changes in an issue before a PR.
 - Comments and some script messages are a mix of English and Chinese — match the file you're editing.
+- User-facing prompts (dialogs, toasts, menus) are English-only.
 - User-facing label for the transport origin is `Source:` (not `Channel:`) in both dialogs and notifications.

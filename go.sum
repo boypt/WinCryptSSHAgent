@@ -1,5 +1,7 @@
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
+github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf h1:FPsprx82rdrX2jiKyS17BH6IrTmUBYqZa/CXT4uvb+I=
+github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf/go.mod h1:peYoMncQljjNS6tZwI9WVyQB3qZS6u79/N3mBOcnd3I=
 github.com/bi-zone/go-ole v1.2.5 h1:/4G2KrTbq1e3FsMkd40quzwIrLb4QdxZJnUUlG7UjcM=
 github.com/bi-zone/go-ole v1.2.5/go.mod h1:BxzT498d9QAq10L6G/pTMscpDzqnpKN6DUBbmFKwyQY=
 github.com/bi-zone/wmi v1.1.4 h1:82DmCVK/Qf0MKSvUP52tfoJPsD/LPebHI1gZMN6izG4=
@@ -22,6 +24,8 @@ github.com/hattya/go.notify v0.1.0/go.mod h1:nuvugyquHn/r8mFz1tmLqhC8MZ2bUhproXK
 github.com/scjalliance/comshim v0.0.0-20190308082608-cf06d2532c4e/go.mod h1:9Tc1SKnfACJb9N7cw2eyuI6xzy845G7uZONBsi5uPEA=
 github.com/scjalliance/comshim v0.0.0-20250111221056-b2ef9d8d7e0f h1:v+bqkkvZj6Oasqi58jzJk03XO0vaXvdb6SS9U1Rbqpw=
 github.com/scjalliance/comshim v0.0.0-20250111221056-b2ef9d8d7e0f/go.mod h1:Zt2M6t3i/fnWviIZkuw9wGn2E185P/rWZTqJkIrViGY=
+github.com/sqweek/dialog v0.0.0-20260123140253-64c163d53aac h1:/QqP+ajFMma4hNWQyBDVaQQhz9Z1kDyXScNWMO3owx0=
+github.com/sqweek/dialog v0.0.0-20260123140253-64c163d53aac/go.mod h1:/qNPSY91qTz/8TgHEMioAUc6q7+3SOybeKczHMXFcXw=
 golang.org/x/crypto v0.41.0 h1:WKYxWedPGCTVVl5+WHSSrOBT0O8lx32+zxmHxijgXp4=
 golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sUc=
 golang.org/x/sys v0.0.0-20190916202348-b4ddaad3f8a3/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

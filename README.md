@@ -102,6 +102,10 @@ Switch to **Manual Confirm** from the tray menu (`•` marks the current mode) t
 - The selected mode is persisted in the registry at `HKCU\Software\WinCryptSSHAgent` (`ConfirmRequired`), so it survives restarts.
 - Start with `-confirm` or set `WCSA_CONFIRM=1` to force Manual Confirm; this overrides the registry and updates it.
 
+### Key Auto-Load & Import
+
+ At startup the agent auto-imports `~/.ssh/id_*` (excluding `*.pub` / `*.cert`) plus extra paths from `WCSA_KEYS` (separated by `;` on Windows — spaces are fine, only `;` splits); the tray menu `Import Key…` imports a chosen file with the same logic. Encrypted keys are unlocked with `WCSA_KEY_PASSPHRASE` (one passphrase tried for all keys, kept only in memory, never logged); keys that fail are skipped with a toast and never block startup. If the env passphrase is missing or wrong, a system password dialog asks for the key passphrase (cancel skips with a toast); a successfully entered passphrase is reused in memory for the remaining keys in this run. If `SSH_ASKPASS` points to a helper program it is tried before the built-in dialog; if the helper exits without a password the key is skipped with a toast and the built-in dialog is not shown.
+
 ### Debug log
 
 1. Run `setx WCSA_DEBUG 1`

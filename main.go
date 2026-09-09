@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -103,6 +104,7 @@ func initDebugLog() {
 		}
 		os.Stdout = f
 		os.Stderr = f
+		log.SetOutput(f)
 	}
 }
 
@@ -166,15 +168,17 @@ func main() {
 
 	// agent
 	var ag agent.Agent
+	var keyring *sshagent.KeyRingAgent
 	if hvClient {
 		ag = sshagent.NewHVAgent()
 	} else if *disableCapi {
-		ag = sshagent.NewKeyRingAgent()
+		keyring = sshagent.NewKeyRingAgent()
+		ag = keyring
 	} else {
 		cag := new(sshagent.CAPIAgent)
 		defer cag.Close()
-		defaultAgent := sshagent.NewKeyRingAgent()
-		ag = sshagent.NewWrappedAgent(defaultAgent, []agent.Agent{agent.Agent(cag)})
+		keyring = sshagent.NewKeyRingAgent()
+		ag = sshagent.NewWrappedAgent(keyring, []agent.Agent{agent.Agent(cag)})
 	}
 	ctx = context.WithValue(ctx, "agent", ag)
 	ctx = context.WithValue(ctx, "hv", hvClient)
@@ -225,8 +229,17 @@ func main() {
 	buildMenu()
 	err = sysTray.Add()
 	if err != nil {
+		log.Printf("systray: Add failed: %v", err)
 		utils.MessageBox("Error:", err.Error(), utils.MB_ICONERROR)
 		goto cleanup
+	}
+
+	// AutoLoad after the tray icon exists: key import toasts require the
+	// icon to be added first, otherwise Notify triggers an early NIM_ADD
+	// and the Add above fails with "Unspecified error". Runs in background
+	// so passphrase helpers never block the tray menu.
+	if keyring != nil {
+		go sshagent.AutoLoadKeys(keyring)
 	}
 
 	// event
