@@ -35,7 +35,7 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 - `app/` — one file per transport/protocol (WSL, Hyper-V vsock, Cygwin socket, named pipe, Pageant, XShell, pubkey view). Each implements the `Application` interface (`app/app.go`); new apps must be added to the `applications` slice in `main.go`.
 - `sshagent/` — agent backends: `CAPIAgent` (Windows CryptoAPI), `KeyRingAgent` (in-memory fallback), `HVAgent` (Hyper-V guest mode), `WrappedAgent` (composes backends). `SourceAgent` tags requests with the transport's full name so backends can report `Source:`.
 - `capi/` — CryptoAPI bindings; `utils/` — Win32 helpers (UAC, WSL2 detection, Hyper-V, notifications, confirm dialog + registry).
-- Runtime mode switch in `main.go`: if a Hyper-V host connection is detected, the process acts as a Hyper-V guest agent (`HVAgent`) instead of serving local cert-store keys.
+- Runtime mode switch in `main.go`: if `ConnectHyperV` (dial to `HvsockGUIDParent`) succeeds, the process is inside a guest VM and acts as an agent *client* (`HVAgent`) — all signing is forwarded over vsock to the host's WinCryptSSHAgent. On the physical host the dial fails (not supported), so it serves local cert-store keys via CAPI. WSL2/Linux guests use the same vsock service but connect via socat (byte-forwarder) rather than running this exe.
 - Systray menu (`github.com/hattya/go.notify`): the native popup is rebuilt from the Go-side item list on every right-click, and `sysTray.CreateMenu()` replaces that list. `buildMenu()` in `main.go` re-registers all app items plus the Manual/Auto Confirm items — call it from the event-loop goroutine whenever menu state changes.
 
 ## Runtime flags / env (useful when debugging)

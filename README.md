@@ -77,6 +77,27 @@ Check [Yubikey with WSL tutorial](doc/wsl_tutorial.md) to start using Yubikey wi
 3. From Category, select 'SSH', Select 'Use Xagent (SSH agent)' for passphrase handling.
 4. From Category, select 'Authentication' and select 'Public Key' as the authentication method.
 
+### Hyper-V / WSL2 vsock
+
+The agent listens on a Hyper-V vsock service (ID `0x22223333`) so that guests can reach it without any port forwarding or socket files:
+
+- **WSL2 / Linux on Hyper-V** — from inside the guest, bridge a local Unix socket to the host over AF_VSOCK (protocol 40). The tray menu *Show WSL2 / Linux On Hyper-V Settings* copies a ready-to-paste `socat` snippet:
+
+  ```bash
+  export SSH_AUTH_SOCK=/tmp/wincrypt-hv.sock
+  ss -lnx | grep -q $SSH_AUTH_SOCK || {
+    rm -f $SSH_AUTH_SOCK
+    (setsid nohup socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork \
+      SOCKET-CONNECT:40:0:x0000x33332222x02000000x00000000 >/dev/null 2>&1) & disown
+  }
+  ```
+
+  (`x0000x33332222x02000000x00000000` is the host VM's ID; socat ≥ 1.7.4 also accepts `VSOCK-CONNECT:2:0x22223333`.)
+
+- **Windows guest VM under Hyper-V** — running the same exe inside the guest detects the host via `ConnectHyperV` (dial to `HvsockGUIDParent`) and switches to *HVAgent* mode: all signing requests are forwarded over vsock to the host's agent, which holds the actual certificates / smart-card keys. On the physical host the dial fails (not supported), so the process stays in local CAPI mode. The `-i` flag registers the guest communication service in the guest's registry (requires elevation).
+
+Both paths use the same vsock channel; the difference is whether the guest-side endpoint is a Go program (HVAgent) or a pure byte-forwarder (socat).
+
 ### OpenSSH Certificates
 
 OpenSSH supports authentication using SSH certificates. Certificates contain a public key, identity information and are signed with a standard SSH key.
