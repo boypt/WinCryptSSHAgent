@@ -1,26 +1,34 @@
 package utils
 
 import (
-	"github.com/bi-zone/wmi"
+	"encoding/binary"
 	"golang.org/x/sys/windows"
 	"os"
 	"syscall"
 )
 
 func CheckSCardSvrStatus() (bool, error) {
-	type Win32_Service struct {
-		State string
-	}
-	var services []Win32_Service
-	q := wmi.CreateQuery(&services, "WHERE Name='SCardSvr'")
-	err := wmi.Query(q, &services)
+	mgr, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
 	if err != nil {
 		return false, err
 	}
-	if len(services) > 0 && services[0].State == "Running" {
-		return true, nil
+	defer windows.CloseServiceHandle(mgr)
+	namePtr, err := syscall.UTF16PtrFromString("SCardSvr")
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+	svc, err := windows.OpenService(mgr, namePtr, windows.SERVICE_QUERY_STATUS)
+	if err != nil {
+		return false, err
+	}
+	defer windows.CloseServiceHandle(svc)
+	// SERVICE_STATUS_PROCESS.CurrentState sits at offset 4.
+	buf := make([]byte, 8)
+	var needed uint32
+	if err := windows.QueryServiceStatusEx(svc, windows.SC_STATUS_PROCESS_INFO, &buf[0], uint32(len(buf)), &needed); err != nil {
+		return false, err
+	}
+	return binary.LittleEndian.Uint32(buf[4:8]) == windows.SERVICE_RUNNING, nil
 }
 
 func StartSCardSvr() error {

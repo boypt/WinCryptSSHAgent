@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"fmt"
-	"github.com/bi-zone/wmi"
+	"strings"
+	"time"
 )
 
 const (
@@ -11,13 +11,6 @@ const (
 	PROCESS_MODIFY
 	PROCESS_ERROR
 )
-
-const processEventQuery = `
-SELECT * FROM __InstanceOperationEvent
-WITHIN 1
-WHERE
-TargetInstance ISA 'Win32_Process'
-AND TargetInstance.Name='%s'`
 
 type ProcessEvent struct {
 	Type        int
@@ -28,80 +21,85 @@ type ProcessEvent struct {
 	CommandLine string
 }
 
-type wmiProcessEvent struct {
-	TimeStamp uint64 `wmi:"TIME_CREATED"`
-	System    struct {
-		Class string
-	} `wmi:"Path_"`
-	Instance win32Process `wmi:"TargetInstance"`
-}
-
-type win32Process struct {
-	ProcessId   uint32
-	Name        string
-	CommandLine string
-}
-
+// ProcessNotify polls the Toolhelp process snapshot every second and reports
+// set differences for the watched exe name. New pids → PROCESS_CREATE,
+// vanished pids → PROCESS_DELETE, snapshot failures → PROCESS_ERROR
+// (PROCESS_MODIFY is kept for API compatibility but never produced).
 type ProcessNotify struct {
-	q      *wmi.NotificationQuery
-	events chan wmiProcessEvent
-	ch     chan<- *ProcessEvent
+	name string
+	ch   chan<- *ProcessEvent
+	stop chan struct{}
 }
 
 func NewProcessNotify(name string, ch chan<- *ProcessEvent) (*ProcessNotify, error) {
-	events := make(chan wmiProcessEvent)
-	q, err := wmi.NewNotificationQuery(events, fmt.Sprintf(processEventQuery, name))
-	if err != nil {
-		return nil, err
-	}
 	return &ProcessNotify{
-		q:      q,
-		events: events,
-		ch:     ch,
+		name: name,
+		ch:   ch,
+		stop: make(chan struct{}),
 	}, nil
 }
 
 func (s *ProcessNotify) Start() {
-	done := make(chan error, 1)
-
-	go func() {
-		done <- s.q.StartNotifications()
-	}()
-
-	go s.dispatch(done)
+	go s.watch()
 }
 
 func (s *ProcessNotify) Stop() {
-	s.q.Stop()
+	select {
+	case <-s.stop:
+	default:
+		close(s.stop)
+	}
 }
 
-func (s *ProcessNotify) dispatch(done chan error) {
+func (s *ProcessNotify) watch() {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	prev, err := snapshotProcesses()
+	if err != nil {
+		s.ch <- &ProcessEvent{Type: PROCESS_ERROR, Error: err}
+		prev = make(map[uint32]string)
+	}
 	for {
 		select {
-		case ev := <-s.events:
-			event := &ProcessEvent{
-				TimeStamp:   ev.TimeStamp,
-				ProcessId:   ev.Instance.ProcessId,
-				Name:        ev.Instance.Name,
-				CommandLine: ev.Instance.CommandLine,
-			}
-			switch ev.System.Class {
-			case "__InstanceCreationEvent":
-				event.Type = PROCESS_CREATE
-			case "__InstanceDeletionEvent":
-				event.Type = PROCESS_DELETE
-			default:
-				event.Type = PROCESS_MODIFY
-			}
-			s.ch <- event
-		case err := <-done:
-			event := &ProcessEvent{
-				Type:  PROCESS_ERROR,
-				Error: err,
-			}
-			s.ch <- event
+		case <-s.stop:
 			return
+		case <-ticker.C:
+			cur, err := snapshotProcesses()
+			if err != nil {
+				s.ch <- &ProcessEvent{Type: PROCESS_ERROR, Error: err}
+				continue
+			}
+			now := uint64(time.Now().UnixNano())
+			for pid, name := range cur {
+				if _, ok := prev[pid]; ok {
+					continue
+				}
+				if !strings.EqualFold(name, s.name) {
+					continue
+				}
+				s.ch <- &ProcessEvent{
+					Type:        PROCESS_CREATE,
+					TimeStamp:   now,
+					ProcessId:   pid,
+					Name:        name,
+					CommandLine: processCommandLine(pid),
+				}
+			}
+			for pid, name := range prev {
+				if _, ok := cur[pid]; ok {
+					continue
+				}
+				if !strings.EqualFold(name, s.name) {
+					continue
+				}
+				s.ch <- &ProcessEvent{
+					Type:      PROCESS_DELETE,
+					TimeStamp: now,
+					ProcessId: pid,
+					Name:      name,
+				}
+			}
+			prev = cur
 		}
 	}
-
 }

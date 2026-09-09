@@ -8,8 +8,8 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 - Prefer established, well-maintained libraries over custom implementations.
 
 ## Forked deps (windows/arm64; remove when upstream catches up)
-- `go.mod` replaces `hattya/go.notify => boypt/go.notify v0.1.1` (adds missing `windows/arm64` syscall bindings, isomorphic to amd64) and `bi-zone/wmi => boypt/wmi v1.1.5` (`bi-zone/go-ole` → `go-ole/go-ole v1.3.0`, which ships arm64; module path unchanged).
-- Drop both replaces once upstream merges/releases equivalents (go.notify with arm64 files, wmi without `bi-zone/go-ole`).
+- `go.mod` replaces `hattya/go.notify => boypt/go.notify v0.1.1` (adds missing `windows/arm64` syscall bindings, isomorphic to amd64).
+- Drop the replace once upstream merges/releases an equivalent (go.notify with arm64 files).
 
 ## Build & verify
 
