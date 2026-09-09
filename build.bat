@@ -4,8 +4,8 @@ setlocal
 @rem Build all by default
 if [%1]==[] (
 	go generate
-	call :build 386 WinCryptSSHAgent_32bit.exe
 	call :build amd64 WinCryptSSHAgent.exe
+	call :build arm64 WinCryptSSHAgent-arm64.exe
 ) else (
 	go generate
 	call :build %1 WinCryptSSHAgent-%1.exe

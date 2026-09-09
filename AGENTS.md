@@ -7,6 +7,10 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 - Choose the simplest implementation that fully meets the current requirements.
 - Prefer established, well-maintained libraries over custom implementations.
 
+## Forked deps (windows/arm64; remove when upstream catches up)
+- `go.mod` replaces `hattya/go.notify => boypt/go.notify v0.1.1` (adds missing `windows/arm64` syscall bindings, isomorphic to amd64) and `bi-zone/wmi => boypt/wmi v1.1.5` (`bi-zone/go-ole` → `go-ole/go-ole v1.3.0`, which ships arm64; module path unchanged).
+- Drop both replaces once upstream merges/releases equivalents (go.notify with arm64 files, wmi without `bi-zone/go-ole`).
+
 ## Build & verify
 
 - No test suite exists. Verification = a successful cross-compile + `go vet`. Do not invent `go test` expectations.
@@ -14,7 +18,7 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 - The app is GUI + Win32 (`x/sys/windows`, winio, WMI): it cannot run on Linux/macOS. Cross-compile instead:
   - `GOOS=windows GOARCH=amd64 go build` — quick check build
   - `./build.sh` — full 64-bit build: syncs `versioninfo.json` from the latest `v*` git tag (requires `jq`), runs `go generate`, injects version ldflags (`-X main.agentVersion/...`), outputs `WinCryptSSHAgent.exe`. Restores `versioninfo.json` afterward locally (CI keeps it changed).
-  - `./build.sh all` → 386 + amd64; `./build.sh <arch>` → single arch.
+  - `./build.sh all` → amd64 + arm64; `./build.sh <arch>` → single arch.
   - `build.bat` is the Windows equivalent but does not sync versioninfo or inject version ldflags.
   - When building manually with `go build`, add `-ldflags "-w -s -H=windowsgui"` (same as in `build.sh`).
 - `go generate` runs `goversioninfo` with `-platform-specific` — install first: `go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest`. It generates `resource_windows_<arch>.syso` files (all gitignored via `*.syso`).
@@ -23,7 +27,7 @@ Windows-only SSH agent (Go) exposing Windows Certificate Store / smart-card keys
 ## Release
 
 - Git remotes: `origin` = upstream `buptczq/WinCryptSSHAgent` (no push access), `pt` = fork `boypt/WinCryptSSHAgent` (the push target; `master` tracks `pt`). Release flow: `git push pt master` first, then create the lightweight tag (`git tag vX.Y.Z`) and `git push pt v*` — never `git push origin` (permission denied). CI only needs the tag (it checks out the tag ref with full history), but mainline must be pushed explicitly: pushing a tag uploads the commits without moving the remote `master` ref.
-- CI (`.github/workflows/go.yml`) triggers only on pushing a `v*` tag: builds amd64 only via `build.sh` and uploads `WinCryptSSHAgent*.exe` to a **prerelease**. Full git history is fetched because the version derives from `git describe`.
+- CI (`.github/workflows/go.yml`) triggers only on pushing a `v*` tag: builds amd64 + arm64 via `build.sh all` and uploads `WinCryptSSHAgent*.exe` to a **prerelease**. Full git history is fetched because the version derives from `git describe`.
 - House style after CI: edit the release to a formal/latest one with notes, e.g. `gh release edit v1.1.14 --notes-file <md> --prerelease=false --latest`. Tags are lightweight.
 
 ## Architecture

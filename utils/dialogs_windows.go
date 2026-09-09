@@ -30,7 +30,7 @@ var (
 )
 
 // credUIInfo mirrors CREDUI_INFOW. cbSize is set via reflection so the layout
-// stays correct on both 386 and amd64.
+// stays correct on all architectures.
 type credUIInfo struct {
 	cbSize      uint32
 	hwndParent  uintptr
@@ -119,7 +119,7 @@ var (
 )
 
 // openFileName mirrors OPENFILENAMEW. structSize is set via reflection so
-// the layout stays correct on both 386 and amd64.
+// the layout stays correct on all architectures.
 type openFileName struct {
 	structSize    uint32
 	hwndOwner     uintptr

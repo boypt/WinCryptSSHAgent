@@ -12,9 +12,13 @@ require (
 )
 
 require (
-	github.com/bi-zone/go-ole v1.2.5 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/scjalliance/comshim v0.0.0-20250111221056-b2ef9d8d7e0f // indirect
+)
+
+replace (
+	github.com/bi-zone/wmi => github.com/boypt/wmi v1.1.5
+	github.com/hattya/go.notify => github.com/boypt/go.notify v0.1.1
 )

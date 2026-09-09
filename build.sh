@@ -61,8 +61,8 @@ if [ "$1" = "all" ]; then
     go generate
 
     # 编译所有架构
-    build_arch "386" "WinCryptSSHAgent_32bit.exe"
     build_arch "amd64" "WinCryptSSHAgent.exe"
+    build_arch "arm64" "WinCryptSSHAgent-arm64.exe"
 elif [ -z "$1" ]; then
     # 默认只编译 64 位版本
     sync_versioninfo

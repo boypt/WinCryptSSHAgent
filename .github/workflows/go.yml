@@ -28,7 +28,7 @@ jobs:
     - name: Build
       run: |
         chmod +x build.sh
-        ./build.sh
+        ./build.sh all
 
     - name: Upload Release
       uses: softprops/action-gh-release@v3
