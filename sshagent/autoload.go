@@ -155,12 +155,17 @@ func AutoLoadKeys(keyring *KeyRingAgent) {
 	for _, f := range files {
 		_ = AddKeyFile(keyring, f, "AutoLoad")
 	}
-	// WCSA_ASKPASS is only honored during startup auto-load; clear it so later
-	// manual imports (tray Import Key…) don't silently invoke the helper.
-	if err := os.Unsetenv("WCSA_ASKPASS"); err != nil {
-		log.Printf("autoload: unset WCSA_ASKPASS failed: %v", err)
-	} else {
-		log.Printf("autoload: cleared WCSA_ASKPASS for subsequent imports")
+	// WCSA_KEYS / WCSA_KEY_PASSPHRASE / WCSA_ASKPASS are honored only during
+	// startup auto-load. Clear them afterwards so they never linger in the
+	// process environment (which child processes inherit) and so manual tray
+	// imports always use the built-in dialog. Only the names are logged,
+	// never any values.
+	for _, name := range []string{"WCSA_KEYS", "WCSA_KEY_PASSPHRASE", "WCSA_ASKPASS"} {
+		if err := os.Unsetenv(name); err != nil {
+			log.Printf("autoload: unset %s failed: %v", name, err)
+		} else {
+			log.Printf("autoload: cleared %s", name)
+		}
 	}
 	log.Printf("autoload: done")
 }

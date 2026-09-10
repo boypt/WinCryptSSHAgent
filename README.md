@@ -119,7 +119,12 @@ Switch to **Manual Confirm** from the tray menu (`•` marks the current mode) t
 
 ### Key Auto-Load & Import
 
- At startup the agent auto-imports `~/.ssh/id_*` (excluding `*.pub` / `*.cert`) plus extra paths from `WCSA_KEYS` (separated by `;` on Windows — spaces are fine, only `;` splits); the tray menu `Import Key…` imports a chosen file with the same logic. Encrypted keys are unlocked with `WCSA_KEY_PASSPHRASE` (one passphrase tried for all keys, kept only in memory, never logged); a key whose passphrase decrypts nothing shows a warning dialog, while cancelled prompts and unreadable files are skipped with a toast — neither blocks startup. If the env passphrase is missing or wrong, a system password dialog asks for the key passphrase (cancel skips with a toast); a successfully entered passphrase is reused in memory for the remaining keys in this run. If `WCSA_ASKPASS` points to a helper program it is tried before the built-in dialog during startup auto-load (the variable is cleared afterwards, so manual imports always use the built-in dialog); if the helper exits without a password the key is skipped with a toast and the built-in dialog is not shown. The variable is modeled on OpenSSH `ssh-add`'s `SSH_ASKPASS`, but unlike `ssh-add` it is scoped to startup only — its main purpose is non-interactive passphrase acquisition when keys are auto-imported at launch, not an interactive agent-side prompt mechanism. PuTTY `.ppk` files are not supported — convert them with PuTTYgen to OpenSSH format first.
+At startup the agent auto-imports `~/.ssh/id_*` (excluding `*.pub` / `*.cert`) plus extra paths from `WCSA_KEYS` (separated by `;`); the tray menu `Import Key…` imports a chosen file with the same logic.
+
+- Encrypted keys are tried with `WCSA_KEY_PASSPHRASE`, then the `WCSA_ASKPASS` helper (auto-load only), then a system password dialog; an entered passphrase is reused in memory for the remaining keys in the run.
+- Failures never block: decrypt failure shows a warning dialog, cancelled prompts and unreadable files are skipped with a toast.
+- `WCSA_KEYS`, `WCSA_KEY_PASSPHRASE` and `WCSA_ASKPASS` are honored only during startup auto-load and cleared from the process environment afterwards, so child processes never inherit them and manual imports always use the built-in dialog.
+- PuTTY `.ppk` files are not supported — convert them with PuTTYgen to OpenSSH format first.
 
 ### Debug log
 
@@ -147,10 +152,10 @@ Switch to **Manual Confirm** from the tray menu (`•` marks the current mode) t
 |---|---|
 | `WCSA_DEBUG=1` | Append stdout/stderr to `%USERPROFILE%\WCSA_DEBUG.log` (the binary has no console window). |
 | `WCSA_CONFIRM=1` | Force Manual Confirm; overwrites the registry value. |
-| `WCSA_KEYS` | Extra private-key files to auto-load, separated by `;` on Windows. |
-| `WCSA_KEY_PASSPHRASE` | Single passphrase tried for all encrypted keys (memory only, never logged). |
+| `WCSA_KEYS` | Extra private-key files to auto-load, separated by `;` on Windows; cleared from the environment after auto-load. |
+| `WCSA_KEY_PASSPHRASE` | Single passphrase tried for all encrypted keys during auto-load (memory only, never logged); cleared from the environment after auto-load. |
 | `WCSA_CHECKSVR=1` | Before CAPI signing, warn if the Smart Card service is stopped and offer to start it. |
-| `WCSA_ASKPASS` | Helper program run to obtain a key passphrase during startup auto-load only; cleared after auto-load so later manual imports use the built-in dialog. Modeled on OpenSSH `ssh-add`'s `SSH_ASKPASS`, but intentionally scoped to startup: its main purpose is non-interactive passphrase acquisition when the agent auto-imports keys at launch. |
+| `WCSA_ASKPASS` | Helper program run to obtain a key passphrase during startup auto-load only; the helper inherits the agent's environment, and the variable is cleared after auto-load together with `WCSA_KEYS`/`WCSA_KEY_PASSPHRASE` so later manual imports use the built-in dialog. Modeled on OpenSSH `ssh-add`'s `SSH_ASKPASS`, but intentionally scoped to startup: its main purpose is non-interactive passphrase acquisition when the agent auto-imports keys at launch. |
 | `SSH_AUTH_SOCK` | Standard client-side variable pointing at the agent endpoint (named pipe, `wincrypt-cygwin.sock`, …); each tray menu shows the value to export. |
 
 ### Command-line flags

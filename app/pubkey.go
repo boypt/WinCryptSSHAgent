@@ -56,8 +56,9 @@ func (s *PubKeyView) onImport() {
 		if !ok || path == "" {
 			return // cancelled
 		}
-		// Same file→AddedKey logic as startup auto-load; encrypted keys are tried
-		// with WCSA_KEY_PASSPHRASE and skipped with a toast on failure.
+		// Same file→AddedKey logic as startup auto-load; the WCSA_* env inputs
+		// were cleared after auto-load, so encrypted keys always fall back to
+		// the built-in dialog here and are skipped with a toast on failure.
 		_ = sshagent.AddKeyFile(s.ag, path, "Import")
 	}()
 }
