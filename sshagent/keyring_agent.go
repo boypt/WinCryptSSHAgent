@@ -3,6 +3,7 @@ package sshagent
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/buptczq/WinCryptSSHAgent/utils"
 	"golang.org/x/crypto/ssh"
@@ -32,7 +33,13 @@ func (s *KeyRingAgent) SignWithFlags(key ssh.PublicKey, data []byte, flags agent
 }
 
 func (s *KeyRingAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agent.SignatureFlags, source string) (*ssh.Signature, error) {
-	comment := s.findKeyComment(key)
+	comment, found := s.findKeyComment(key)
+	if !found {
+		// Don't prompt for a key this backend doesn't hold: the wrapped agent
+		// may hold it in another backend (e.g. the cert-store CAPI agent), which
+		// would otherwise pop a spurious confirmation dialog per sign request.
+		return nil, errors.New("not found")
+	}
 
 	// 签名确认 / signing confirmation gate
 	if utils.ConfirmRequired {
@@ -49,19 +56,21 @@ func (s *KeyRingAgent) SignWithSource(key ssh.PublicKey, data []byte, flags agen
 	return sig, err
 }
 
-func (s *KeyRingAgent) findKeyComment(pubkey ssh.PublicKey) string {
+// findKeyComment returns the stored comment for pubkey and whether the keyring
+// actually holds that key. When it does not, the fallback (base64 of the key
+// blob) is only used for display, e.g. in a removal notification.
+func (s *KeyRingAgent) findKeyComment(pubkey ssh.PublicKey) (string, bool) {
 	wanted := pubkey.Marshal()
 	keys, err := s.List()
 	if err != nil {
-		goto fallback
+		return base64.StdEncoding.EncodeToString(wanted), false
 	}
 	for _, k := range keys {
 		if bytes.Equal(k.Marshal(), wanted) {
-			return k.Comment
+			return k.Comment, true
 		}
 	}
-fallback:
-	return base64.StdEncoding.EncodeToString(wanted)
+	return base64.StdEncoding.EncodeToString(wanted), false
 }
 
 func (s *KeyRingAgent) AddWithSource(key agent.AddedKey, source string) error {
@@ -82,7 +91,7 @@ func (s *KeyRingAgent) Add(key agent.AddedKey) error {
 }
 
 func (s *KeyRingAgent) RemoveWithSource(key ssh.PublicKey, source string) error {
-    comment := s.findKeyComment(key)
+    comment, _ := s.findKeyComment(key)
     err := s.ag.Remove(key)
     if err == nil {
         msg := fmt.Sprintf("Key <%s> has been removed from keyring", comment)
@@ -107,7 +116,7 @@ func (s *KeyRingAgent) RemoveAllWithSource(source string) error {
 }
 
 func (s *KeyRingAgent) Remove(key ssh.PublicKey) error {
-	comment := s.findKeyComment(key)
+	comment, _ := s.findKeyComment(key)
 	err := s.ag.Remove(key)
 	if err == nil {
 		defer utils.NotifyRemove(
