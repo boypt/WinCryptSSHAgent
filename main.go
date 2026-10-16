@@ -109,8 +109,17 @@ func initDebugLog() {
 }
 
 func main() {
+	flag.Parse()
+	utils.SetProcessSystemDpiAware()
+	initDebugLog()
+	if *installHVService {
+		installService()
+		return
+	}
 
-    // 单实例保护  
+    // 单实例保护
+    // 注意：-i 安装模式已在上面提前返回，不受单例限制，
+    // 否则托盘常驻时提权子进程会被误判为第二实例而拦截。
     mutex, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr("WinCryptSSHAgent_SingleInstance"))  
     if err != nil {  
 	utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!: "+err.Error(),  utils.MB_ICONWARNING)  
@@ -126,10 +135,7 @@ func main() {
     }  
 
 
-	flag.Parse()
-	utils.SetProcessSystemDpiAware()
-	initDebugLog()
-	// Confirm mode resolution: explicit flag/env wins; otherwise fall back to the
+    // Confirm mode resolution: explicit flag/env wins; otherwise fall back to the
 	// persisted registry state; otherwise default to Auto Confirm.
 	manualConfirm := *confirmRequired || os.Getenv("WCSA_CONFIRM") == "1"
 	if manualConfirm {
@@ -139,10 +145,6 @@ func main() {
 		utils.ConfirmRequired = regVal
 	} else {
 		utils.ConfirmRequired = false
-	}
-	if *installHVService {
-		installService()
-		return
 	}
 	// hyper-v
 	hvClient := false
