@@ -49,6 +49,7 @@ var installHVService = flag.Bool("i", false, "Install Hyper-V Guest Communicatio
 var disableCapi = flag.Bool("disable-capi", false, "Disable Windows Crypto API")
 var disablePINCache = flag.Bool("disable-pin-cache", false, "Clear the Smart Card PIN Cache after each operation")
 var confirmRequired = flag.Bool("confirm", false, "Require user confirmation before signing (or set WCSA_CONFIRM=1)")
+var smartCardLogonOnly = flag.Bool("smart-card-logon-only", false, "Advertise Smart Card Logon keys only")
 
 func installService() {
 	if !utils.IsAdmin() {
@@ -179,7 +180,7 @@ func main() {
 		keyring = sshagent.NewKeyRingAgent()
 		ag = keyring
 	} else {
-		cag := new(sshagent.CAPIAgent)
+		cag := &sshagent.CAPIAgent{SmartCardLogonOnly: *smartCardLogonOnly}
 		defer cag.Close()
 		keyring = sshagent.NewKeyRingAgent()
 		ag = sshagent.NewWrappedAgent(keyring, []agent.Agent{agent.Agent(cag)})
