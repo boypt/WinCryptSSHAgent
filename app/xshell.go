@@ -148,7 +148,7 @@ func xshellHandshake(conn net.Conn, cookie string) error {
 	}
 
 	var repMsg initAgentRepMsg
-	repMsg.Flag = 99
+	repMsg.Flag = binary.BigEndian.Uint32(body[1:5])
 	rep := ssh.Marshal(&repMsg)
 	buf := bytes.NewBuffer(nil)
 	if err := binary.Write(buf, binary.BigEndian, uint32(len(rep))); err != nil {
