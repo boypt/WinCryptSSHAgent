@@ -179,19 +179,28 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 		return 0, err
 	}
 
-	// sign: XShell may append trailing bytes (or omit Flags on older builds).
-	// Compute the canonical length defensively; never panic on short data.
+	// Canonicalize sign requests (type 13) before handing them to the standard
+	// agent server. A sign request body is laid out as:
+	//   type(1 byte) | KeyBlob(4-byte length + blob) |
+	//   Data(4-byte length + data) | Flags(4 bytes)
+	// Two XShell deviations are handled here:
+	//   - newer builds append trailing bytes after Flags: truncate them;
+	//   - older builds omit Flags entirely: pad with zero Flags instead.
+	// Every step below is bounds-checked so a short or malformed frame sets
+	// ok=false (and is passed through untouched) instead of panicking.
 	if s.buf[4] == agentSignRequest {
 		data := s.buf[4:]
 		bodyLen := uint32(len(data))
 
 		totalLen := uint32(0)
 		ok := true
+		// Field 1: message type, 1 byte (always 13 on this path).
 		if bodyLen < 1 {
 			ok = false
 		} else {
 			totalLen = 1
 		}
+		// Field 2: KeyBlob, a length-prefixed string: 4-byte length + blob.
 		if ok && totalLen+4 > bodyLen {
 			ok = false
 		} else if ok {
@@ -202,6 +211,8 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 				totalLen += 4 + kbLen
 			}
 		}
+		// Field 3: Data (the bytes to sign), also length-prefixed:
+		// 4-byte length + data.
 		if ok && totalLen+4 > bodyLen {
 			ok = false
 		} else if ok {
@@ -212,6 +223,8 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 				totalLen += 4 + dataLen
 			}
 		}
+		// Field 4: Flags, 4 bytes. Optional: present on newer builds,
+		// absent on older ones.
 		hasFlags := false
 		if ok && totalLen+4 <= bodyLen {
 			hasFlags = true
@@ -219,12 +232,16 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 		}
 
 		if ok && totalLen > 0 {
+			// out covers the 4-byte frame length prefix plus the canonical
+			// body; anything beyond it is XShell trailing bytes.
 			out := s.buf[:totalLen+4]
 			var req signRequestAgentMsg
 			if err := ssh.Unmarshal(out[4:], &req); err == nil {
 				l = totalLen
 				s.buf = out
 			} else if !hasFlags {
+				// Older build without Flags: append 4 zero bytes as Flags
+				// and retry; on success grow the buffer by those 4 bytes.
 				padded := make([]byte, len(out[4:])+4)
 				copy(padded, out[4:])
 				if err2 := ssh.Unmarshal(padded, &req); err2 == nil {
