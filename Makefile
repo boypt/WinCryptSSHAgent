@@ -53,7 +53,7 @@ sync-version:
 		echo "Skip versioninfo.json sync (invalid or empty BUILD_VER: '$$BUILD_VER')"; \
 	else \
 		IFS='.' read -r MAJ MIN PAT <<< "$$BUILD_VER"; \
-		jq --argjson maj "$$MAJ" --argjson min "$$MIN" --argjson pat "$$PAT" --arg ver "$$BUILD_VER" '.FixedFileInfo.FileVersion.Major = $$maj | .FixedFileInfo.FileVersion.Minor = $$min | .FixedFileInfo.FileVersion.Patch = $$pat | .FixedFileInfo.ProductVersion.Major = $$maj | .FixedFileInfo.ProductVersion.Minor = $$min | .FixedFileInfo.ProductVersion.Patch = $$pat | .StringFileInfo.ProductVersion = $$ver' versioninfo.json > versioninfo.json.tmp && mv versioninfo.json.tmp versioninfo.json && echo "versioninfo.json synced to $$BUILD_VER"; \
+		jq --argjson maj "$$MAJ" --argjson min "$$MIN" --argjson pat "$$PAT" --arg ver "$$BUILD_VER" '.FixedFileInfo.FileVersion.Major = $$maj | .FixedFileInfo.FileVersion.Minor = $$min | .FixedFileInfo.FileVersion.Patch = $$pat | .FixedFileInfo.ProductVersion.Major = $$maj | .FixedFileInfo.ProductVersion.Minor = $$min | .FixedFileInfo.ProductVersion.Patch = $$pat | .StringFileInfo.ProductVersion = $$ver | .StringFileInfo.FileDescription = ("WinCrypt SSH Agent " + $$ver)' versioninfo.json > versioninfo.json.tmp && mv versioninfo.json.tmp versioninfo.json && echo "versioninfo.json synced to $$BUILD_VER"; \
 	fi
 
 # Restores versioninfo.json after a local build (CI keeps it changed).

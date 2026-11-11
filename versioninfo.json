@@ -21,7 +21,7 @@
     "StringFileInfo": {
         "Comments": "A SSH Agent based-on Windows CryptoAPI",
         "CompanyName": "",
-        "FileDescription": "WinCrypt SSH Agent",
+        "FileDescription": "WinCrypt SSH Agent 1.2.5",
         "FileVersion": "",
         "InternalName": "",
         "LegalCopyright": "Copyright © 2019-2021 BUPTCZQ.",
