@@ -14,7 +14,9 @@ import (
 
 const (
 	maxAgentResponseBytes = 16 << 20
-	agentSignRequest      = 13
+	// XShell Xagent message types.
+	agentSignRequest  = 13
+	xagentInitRequest = 99
 )
 
 type XShell struct {
@@ -94,7 +96,7 @@ func xshellHandshake(conn net.Conn, cookie string) error {
 	if _, err := io.ReadFull(conn, req); err != nil {
 		return err
 	}
-	if req[0] != 99 {
+	if req[0] != xagentInitRequest {
 		return fmt.Errorf("xagent: unknown opcode: %d", req[0])
 	}
 
@@ -105,8 +107,9 @@ func xshellHandshake(conn net.Conn, cookie string) error {
 	if int(initMsg.Length) != len(cookie) {
 		return fmt.Errorf("xagent: invalid cookie length")
 	}
-	// Newer XShell (8) may append extra data (e.g. a key name) after the
-	// cookie in the handshake frame; keep only the first Length bytes.
+	// Newer XShell (8 build 0119+) may append extra data (e.g. a key name)
+	// after the cookie in the handshake frame; keep only the first Length bytes.
+	// This extended handshake layout first appeared in XShell 8 build 0119.
 	if len(initMsg.Cookie) > int(initMsg.Length) {
 		initMsg.Cookie = initMsg.Cookie[:initMsg.Length]
 	}
