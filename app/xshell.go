@@ -81,52 +81,80 @@ type initAgentRepMsg struct {
 }
 
 func xshellHandshake(conn net.Conn, cookie string) error {
-	var length [4]byte
-	if _, err := io.ReadFull(conn, length[:]); err != nil {
+	// Read the 4-byte length prefix. Different XShell versions use different
+	// semantics for this value (legacy builds send a small value and split the
+	// cookie across the frame boundary; newer builds send the full body length).
+	// We therefore only use it to decide how many bytes to read, then parse the
+	// fixed-layout payload: Flag(4) + Length(4) + Cookie(Length).
+	var prefix [4]byte
+	if _, err := io.ReadFull(conn, prefix[:]); err != nil {
 		return err
 	}
-	l := binary.BigEndian.Uint32(length[:]) + 4
-	if l > maxAgentResponseBytes {
-		return fmt.Errorf("xagent: request too large: %d", l)
+	a := binary.BigEndian.Uint32(prefix[:])
+
+	// The length prefix is a "body length - 4" (i.e. frame body = a+4) for all
+	// observed XShell versions; read the full frame body accordingly.
+	var bodyLen int = int(a) + 4
+	if bodyLen < 5 || bodyLen > maxAgentResponseBytes {
+		return fmt.Errorf("xagent: request too large: %d", bodyLen)
 	}
 
-	req := make([]byte, l)
-	if _, err := io.ReadFull(conn, req); err != nil {
+	body := make([]byte, bodyLen)
+	if _, err := io.ReadFull(conn, body); err != nil {
 		return err
 	}
-	if req[0] != 99 {
-		return fmt.Errorf("xagent: unknown opcode: %d", req[0])
+	if body[0] != 99 {
+		return fmt.Errorf("xagent: unknown opcode: %d", body[0])
 	}
 
-	var initMsg initAgentMsg
-	if err := ssh.Unmarshal(req, &initMsg); err != nil {
-		return err
+	// Detect layout: older XShell sends [type][length][cookie...],
+	// newer XShell sends [type][extra(4)][length][cookie...] (extra=1 seen).
+	lengthOff := 1
+	cookieOff := 5
+	if v := binary.BigEndian.Uint32(body[1:5]); int(v) != len(cookie) {
+		if len(body) >= 9 {
+			if v2 := binary.BigEndian.Uint32(body[5:9]); int(v2) == len(cookie) {
+				lengthOff = 5
+				cookieOff = 9
+			}
+		}
 	}
-	if int(initMsg.Length) != len(cookie) {
-		return fmt.Errorf("xagent: invalid cookie length")
+	if len(body) < cookieOff {
+		return fmt.Errorf("xagent: short body")
 	}
-	if int(initMsg.Length) < len(initMsg.Cookie) {
-		return fmt.Errorf("xagent: invalid message length")
+	length := binary.BigEndian.Uint32(body[lengthOff : lengthOff+4])
+	if int(length) != len(cookie) {
+		return fmt.Errorf("xagent: invalid cookie length (at off %d, got %d)", lengthOff, length)
 	}
 
-	cookieRemain := make([]byte, int(initMsg.Length)-len(initMsg.Cookie))
-	if _, err := io.ReadFull(conn, cookieRemain); err != nil {
-		return err
+	// Cookie bytes may be (partially) in body[cookieOff:] and (partially) in
+	// the remainder of the stream. Take at most `length` bytes from body, then
+	// read any missing bytes from the connection.
+	captured := body[cookieOff:]
+	if len(captured) > int(length) {
+		captured = captured[:length]
 	}
-	cookieReq := string(initMsg.Cookie) + string(cookieRemain)
+	var cookieRemain []byte
+	if len(captured) < int(length) {
+		cookieRemain = make([]byte, int(length)-len(captured))
+		if _, err := io.ReadFull(conn, cookieRemain); err != nil {
+			return err
+		}
+	}
+
+	cookieReq := string(captured) + string(cookieRemain)
 	if cookieReq != cookie {
 		return fmt.Errorf("xagent: invalid cookie")
 	}
+
 	var repMsg initAgentRepMsg
-	repMsg.Flag = initMsg.Flag
+	repMsg.Flag = 99
 	rep := ssh.Marshal(&repMsg)
 	buf := bytes.NewBuffer(nil)
-	err := binary.Write(buf, binary.BigEndian, uint32(len(rep)))
-	if err != nil {
+	if err := binary.Write(buf, binary.BigEndian, uint32(len(rep))); err != nil {
 		return err
 	}
-	_, err = buf.Write(rep)
-	if err != nil {
+	if _, err := buf.Write(rep); err != nil {
 		return err
 	}
 	if _, err := conn.Write(buf.Bytes()); err != nil {
@@ -146,6 +174,7 @@ type signRequestAgentMsg struct {
 	KeyBlob []byte `sshtype:"13"`
 	Data    []byte
 	Flags   uint32
+	Rest    []byte `ssh:"rest"`
 }
 
 func (s *xshellProxy) Read(p []byte) (n int, err error) {
@@ -156,6 +185,7 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 	}
 	var length [4]byte
 	if _, err := io.ReadFull(s.conn, length[:]); err != nil {
+		println("xagent proxy read err:", err.Error())
 		return 0, err
 	}
 	l := binary.BigEndian.Uint32(length[:])
@@ -163,35 +193,73 @@ func (s *xshellProxy) Read(p []byte) (n int, err error) {
 		return 0, io.ErrUnexpectedEOF
 	}
 	if l > maxAgentResponseBytes {
-		return 0, fmt.Errorf("xagent: request too large: %d", l)
+		err := fmt.Errorf("xagent: request too large: %d", l)
+		println(err.Error())
+		return 0, err
 	}
 
 	s.buf = make([]byte, 4+l, 8+l)
 	if _, err := io.ReadFull(s.conn, s.buf[4:]); err != nil {
+		println("xagent proxy read err:", err.Error())
 		return 0, err
 	}
-	// sign
+
+	// sign: XShell may append trailing bytes (or omit Flags on older builds).
+	// Compute the canonical length defensively; never panic on short data.
 	if s.buf[4] == agentSignRequest {
 		data := s.buf[4:]
+		bodyLen := uint32(len(data))
 
-		// 计算实际长度，仅保留协议报文标准的数据
-		totalLen := uint32(1)                                // pass sshtype byte
-		totalLen += binary.BigEndian.Uint32(data[totalLen:]) // get KeyBlob data len
-		totalLen += 4                                        // KeyBlob len byte
-		totalLen += binary.BigEndian.Uint32(data[totalLen:]) // get Data data len
-		totalLen += 4                                        // Data len byte
-		totalLen += 4                                        // Flags byte
-
-		// xshell 低版本没有 Flags，直接填充处理
-		out := s.buf[:totalLen+4]
-
-		var req signRequestAgentMsg
-		err := ssh.Unmarshal(out[4:], &req)
-		if err != nil {
-			return 0, err
+		totalLen := uint32(0)
+		ok := true
+		if bodyLen < 1 {
+			ok = false
 		} else {
-			l = totalLen
-			s.buf = out
+			totalLen = 1
+		}
+		if ok && totalLen+4 > bodyLen {
+			ok = false
+		} else if ok {
+			kbLen := binary.BigEndian.Uint32(data[totalLen:])
+			if totalLen+4+kbLen > bodyLen {
+				ok = false
+			} else {
+				totalLen += 4 + kbLen
+			}
+		}
+		if ok && totalLen+4 > bodyLen {
+			ok = false
+		} else if ok {
+			dataLen := binary.BigEndian.Uint32(data[totalLen:])
+			if totalLen+4+dataLen > bodyLen {
+				ok = false
+			} else {
+				totalLen += 4 + dataLen
+			}
+		}
+		hasFlags := false
+		if ok && totalLen+4 <= bodyLen {
+			hasFlags = true
+			totalLen += 4
+		}
+
+		if ok && totalLen > 0 {
+			out := s.buf[:totalLen+4]
+			var req signRequestAgentMsg
+			if err := ssh.Unmarshal(out[4:], &req); err == nil {
+				l = totalLen
+				s.buf = out
+			} else if !hasFlags {
+				padded := make([]byte, len(out[4:])+4)
+				copy(padded, out[4:])
+				if err2 := ssh.Unmarshal(padded, &req); err2 == nil {
+					newBuf := make([]byte, 4+int(totalLen)+4)
+					copy(newBuf[:4], s.buf[:4])
+					copy(newBuf[4:], s.buf[4:4+int(totalLen)])
+					s.buf = newBuf
+					l = totalLen + 4
+				}
+			}
 		}
 	}
 	binary.BigEndian.PutUint32(s.buf, l)
@@ -215,6 +283,7 @@ func (s *xshellProxy) Write(p []byte) (n int, err error) {
 			s.wlength = 0
 			_, err := s.conn.Write(s.wbuf)
 			if err != nil {
+				println("xagent proxy write err:", err.Error())
 				return 0, err
 			}
 			s.wbuf = nil
