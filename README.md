@@ -9,6 +9,7 @@
 - **Source-tagged notifications** — toasts show the requesting transport with categorized icons.
 - **Windows ARM64 builds** — amd64 + arm64 binaries from `make`, versioned from Git tags.
 - **Broader protocol support** — XShell Xagent compatibility, Hyper-V vsock, graceful shutdown.
+- **XShell 8+ compatibility** — handles the extended Xagent handshake (extra field + trailing key name, XShell 8 build 0119) and sign-request trailing bytes; fixes agent forwarding. Builds on zzmark's XShell compat work (PR #91) plus the extended-handshake fix.
 
 ## Introduction
 
