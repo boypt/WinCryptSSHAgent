@@ -96,8 +96,10 @@ func xshellHandshake(conn net.Conn, cookie string) error {
 	if int(initMsg.Length) != len(cookie) {
 		return fmt.Errorf("xagent: invalid cookie length")
 	}
-	if int(initMsg.Length) < len(initMsg.Cookie) {
-		return fmt.Errorf("xagent: invalid message length")
+	// Newer XShell (8) may append extra data (e.g. a key name) after the cookie
+	// in the handshake frame; keep only the first Length bytes.
+	if len(initMsg.Cookie) > int(initMsg.Length) {
+		initMsg.Cookie = initMsg.Cookie[:initMsg.Length]
 	}
 
 	cookieRemain := make([]byte, int(initMsg.Length)-len(initMsg.Cookie))
