@@ -17,6 +17,9 @@ var (
 	notifier               notify.Notifier
 )
 
+// AuthNotificationDisabled suppresses the successful-signing toast.
+var AuthNotificationDisabled bool
+
 type msgBoxParams struct {
 	cbSize             uint32
 	hwndOwner          windows.Handle
