@@ -22,6 +22,8 @@ const (
 	MENU_CONFIRM_MANUAL
 	MENU_CONFIRM_AUTO
 	APP_IMPORT
+	APP_IMPORT_CAPI
+	APP_CLEAR_KEYS
 )
 
 type Application interface {
@@ -33,29 +35,33 @@ type Application interface {
 type AppId int
 
 var appIdToName = map[AppId]string{
-	APP_CYGWIN:    "Cygwin",
-	APP_WSL:       "WSL",
-	APP_WINSSH:    "WinSSH",
-	APP_SECURECRT: "SecureCRT",
-	APP_PAGEANT:   "Pageant",
-	APP_XSHELL:    "XShell",
-	APP_HYPERV:    "Hyper-V",
-	APP_PUBKEY:    "PubKey",
-	APP_WSL2:      "WSL2",
-	APP_IMPORT:    "Import",
+	APP_CYGWIN:      "Cygwin",
+	APP_WSL:         "WSL",
+	APP_WINSSH:      "WinSSH",
+	APP_SECURECRT:   "SecureCRT",
+	APP_PAGEANT:     "Pageant",
+	APP_XSHELL:      "XShell",
+	APP_HYPERV:      "Hyper-V",
+	APP_PUBKEY:      "PubKey",
+	APP_WSL2:        "WSL2",
+	APP_IMPORT:      "Import",
+	APP_IMPORT_CAPI: "Import CAPI",
+	APP_CLEAR_KEYS:  "Clear Keys",
 }
 
 var appIdToFullName = map[AppId]string{
-	APP_CYGWIN:    "Cygwin (MinGW64 & MSYS2)",
-	APP_WSL:       "Windows Subsystem for Linux",
-	APP_WINSSH:    "Windows OpenSSH",
-	APP_SECURECRT: "SecureCRT",
-	APP_PAGEANT:   "Pageant",
-	APP_XSHELL:    "XShell",
-	APP_HYPERV:    "Hyper-V / WSL2",
-	APP_PUBKEY:    "Public Keys",
-	APP_WSL2:      "Windows Subsystem for Linux (WSL2)",
-	APP_IMPORT:    "Key Import",
+	APP_CYGWIN:      "Cygwin (MinGW64 & MSYS2)",
+	APP_WSL:         "Windows Subsystem for Linux",
+	APP_WINSSH:      "Windows OpenSSH",
+	APP_SECURECRT:   "SecureCRT",
+	APP_PAGEANT:     "Pageant",
+	APP_XSHELL:      "XShell",
+	APP_HYPERV:      "Hyper-V / WSL2",
+	APP_PUBKEY:      "Public Keys",
+	APP_WSL2:        "Windows Subsystem for Linux (WSL2)",
+	APP_IMPORT:      "Key Import",
+	APP_IMPORT_CAPI: "Windows Certificate Import",
+	APP_CLEAR_KEYS:  "Clear Keys",
 }
 
 func (id AppId) String() string {

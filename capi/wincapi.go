@@ -1,11 +1,14 @@
 package capi
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
-	"github.com/fullsailor/pkcs7"
 	"syscall"
 	"unsafe"
+
+	"github.com/fullsailor/pkcs7"
 )
 
 const (
@@ -34,13 +37,15 @@ const (
 )
 
 var (
-	modcrypt32                            = syscall.NewLazyDLL("crypt32.dll")
-	modncrypt                             = syscall.NewLazyDLL("ncrypt.dll")
-	procCryptSignMessage                  = modcrypt32.NewProc("CryptSignMessage")
-	procCertDuplicateCertificateContext   = modcrypt32.NewProc("CertDuplicateCertificateContext")
-	procCertGetCertificateContextProperty = modcrypt32.NewProc("CertGetCertificateContextProperty")
-	procCryptAcquireCertificatePrivateKey = modcrypt32.NewProc("CryptAcquireCertificatePrivateKey")
-	procNCryptSetProperty                 = modncrypt.NewProc("NCryptSetProperty")
+	modcrypt32                               = syscall.NewLazyDLL("crypt32.dll")
+	modncrypt                                = syscall.NewLazyDLL("ncrypt.dll")
+	procCryptSignMessage                     = modcrypt32.NewProc("CryptSignMessage")
+	procCertDuplicateCertificateContext      = modcrypt32.NewProc("CertDuplicateCertificateContext")
+	procCertFreeCertificateContext           = modcrypt32.NewProc("CertFreeCertificateContext")
+	procCertGetCertificateContextProperty    = modcrypt32.NewProc("CertGetCertificateContextProperty")
+	procCryptAcquireCertificatePrivateKey    = modcrypt32.NewProc("CryptAcquireCertificatePrivateKey")
+	procNCryptSetProperty                    = modncrypt.NewProc("NCryptSetProperty")
+	procCryptUIDlgSelectCertificateFromStore = syscall.NewLazyDLL("cryptui.dll").NewProc("CryptUIDlgSelectCertificateFromStore")
 )
 
 var disablePINCache = true
@@ -188,6 +193,69 @@ type Certificate struct {
 	*x509.Certificate
 }
 
+// SelectUserCertificate opens the current user's Personal certificate store
+// picker. The returned certificate context is owned by the caller.
+func SelectUserCertificate() (*Certificate, error) {
+	const (
+		certStoreProvSystemA       = 9
+		certSystemStoreCurrentUser = 0x00010000
+		certStoreReadonlyFlag      = 0x00008000
+	)
+	storeName, _ := syscall.BytePtrFromString("My")
+	store, err := syscall.CertOpenStore(certStoreProvSystemA, 0, 0,
+		certSystemStoreCurrentUser|certStoreReadonlyFlag, uintptr(unsafe.Pointer(storeName)))
+	if err != nil {
+		return nil, err
+	}
+	defer syscall.CertCloseStore(store, 0)
+	title, _ := syscall.UTF16PtrFromString("Add Windows Certificate Key")
+	description, _ := syscall.UTF16PtrFromString("Select a certificate with a private key from Current User\\Personal. Smart-card and YubiKey certificates appear here.")
+	ctx, _, callErr := procCryptUIDlgSelectCertificateFromStore.Call(
+		uintptr(store), 0, uintptr(unsafe.Pointer(title)), uintptr(unsafe.Pointer(description)), 0, 0, 0)
+	if ctx == 0 {
+		if callErr != syscall.Errno(0) {
+			return nil, callErr
+		}
+		return nil, nil
+	}
+	defer procCertFreeCertificateContext.Call(ctx)
+	const certSHA256HashPropID = 107
+	var hashSize uint32
+	_, _, _ = procCertGetCertificateContextProperty.Call(ctx, certSHA256HashPropID, 0, uintptr(unsafe.Pointer(&hashSize)))
+	if hashSize == 0 {
+		return nil, fmt.Errorf("could not read selected certificate fingerprint")
+	}
+	hash := make([]byte, hashSize)
+	ret, _, hashErr := procCertGetCertificateContextProperty.Call(ctx, certSHA256HashPropID, uintptr(unsafe.Pointer(&hash[0])), uintptr(unsafe.Pointer(&hashSize)))
+	if ret == 0 {
+		return nil, hashErr
+	}
+	if hashSize != sha256.Size {
+		return nil, fmt.Errorf("unexpected selected certificate fingerprint length: %d", hashSize)
+	}
+	certs, err := LoadUserCerts()
+	if err != nil {
+		return nil, err
+	}
+	var selected *Certificate
+	for _, cert := range certs {
+		fingerprint := sha256.Sum256(cert.Raw)
+		if bytes.Equal(fingerprint[:], hash) {
+			selected = cert
+			break
+		}
+	}
+	for _, cert := range certs {
+		if cert != selected {
+			_ = cert.Free()
+		}
+	}
+	if selected == nil {
+		return nil, fmt.Errorf("selected certificate has no associated private key")
+	}
+	return selected, nil
+}
+
 func (s *Certificate) Free() error {
 	return syscall.CertFreeCertificateContext((*syscall.CertContext)(unsafe.Pointer(s.certContext)))
 }
@@ -255,8 +323,8 @@ func LoadUserCerts() ([]*Certificate, error) {
 				continue
 			}
 			certs = append(certs, &Certificate{
-				cc,
-				c,
+				certContext: cc,
+				Certificate: c,
 			})
 		}
 	}

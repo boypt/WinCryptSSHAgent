@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,8 +49,27 @@ var applications = []app.Application{
 
 var installHVService = flag.Bool("i", false, "Install Hyper-V Guest Communication Services")
 var disableCapi = flag.Bool("disable-capi", false, "Disable Windows Crypto API")
+var disableAutoload = flag.Bool("disable-autoload", envBool("WCSA_DISABLE_AUTOLOAD"), "Disable automatic key discovery (or set WCSA_DISABLE_AUTOLOAD=1)")
 var disablePINCache = flag.Bool("disable-pin-cache", false, "Clear the Smart Card PIN Cache after each operation")
 var confirmRequired = flag.Bool("confirm", false, "Require user confirmation before signing (or set WCSA_CONFIRM=1)")
+var touchNotify = flag.Bool("touch-notify", envBool("WCSA_TOUCH_NOTIFY"), "Show a delayed touch notification (or set WCSA_TOUCH_NOTIFY=1)")
+var disableAuthNotification = flag.Bool("disable-auth-notify", envBool("WCSA_DISABLE_AUTH_NOTIFY"), "Disable successful-signing notifications (or set WCSA_DISABLE_AUTH_NOTIFY=1)")
+
+func envBool(name string) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(name)))
+	if value == "" {
+		return false
+	}
+	if parsed, err := strconv.ParseBool(value); err == nil {
+		return parsed
+	}
+	switch value {
+	case "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
 
 func installService() {
 	if !utils.IsAdmin() {
@@ -110,6 +131,7 @@ func initDebugLog() {
 
 func main() {
 	flag.Parse()
+	utils.AuthNotificationDisabled = *disableAuthNotification
 	utils.SetProcessSystemDpiAware()
 	initDebugLog()
 	if *installHVService {
@@ -117,25 +139,24 @@ func main() {
 		return
 	}
 
-    // 单实例保护
-    // 注意：-i 安装模式已在上面提前返回，不受单例限制，
-    // 否则托盘常驻时提权子进程会被误判为第二实例而拦截。
-    mutex, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr("WinCryptSSHAgent_SingleInstance"))  
-    if err != nil {  
-	utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!: "+err.Error(),  utils.MB_ICONWARNING)  
-        return  
-    }  
-    defer windows.CloseHandle(mutex)  
-      
-    // 检查是否已有实例运行  
-    result, err := windows.WaitForSingleObject(mutex, 0)  
-    if err != nil || result != windows.WAIT_OBJECT_0 {  
-        utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!", utils.MB_ICONWARNING)  
-        return  
-    }  
+	// 单实例保护
+	// 注意：-i 安装模式已在上面提前返回，不受单例限制，
+	// 否则托盘常驻时提权子进程会被误判为第二实例而拦截。
+	mutex, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr("WinCryptSSHAgent_SingleInstance"))
+	if err != nil {
+		utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!: "+err.Error(), utils.MB_ICONWARNING)
+		return
+	}
+	defer windows.CloseHandle(mutex)
 
+	// 检查是否已有实例运行
+	result, err := windows.WaitForSingleObject(mutex, 0)
+	if err != nil || result != windows.WAIT_OBJECT_0 {
+		utils.MessageBox("Warning:", "WinCryptSSHAgent is already running!", utils.MB_ICONWARNING)
+		return
+	}
 
-    // Confirm mode resolution: explicit flag/env wins; otherwise fall back to the
+	// Confirm mode resolution: explicit flag/env wins; otherwise fall back to the
 	// persisted registry state; otherwise default to Auto Confirm.
 	manualConfirm := *confirmRequired || os.Getenv("WCSA_CONFIRM") == "1"
 	if manualConfirm {
@@ -173,16 +194,19 @@ func main() {
 	// agent
 	var ag agent.Agent
 	var keyring *sshagent.KeyRingAgent
+	var capiAgent *sshagent.CAPIAgent
 	if hvClient {
 		ag = sshagent.NewHVAgent()
 	} else if *disableCapi {
 		keyring = sshagent.NewKeyRingAgent()
 		ag = keyring
 	} else {
-		cag := new(sshagent.CAPIAgent)
-		defer cag.Close()
+		capiAgent = new(sshagent.CAPIAgent)
+		capiAgent.SetAutoLoad(!*disableAutoload)
+		capiAgent.SetTouchNotification(*touchNotify)
+		defer capiAgent.Close()
 		keyring = sshagent.NewKeyRingAgent()
-		ag = sshagent.NewWrappedAgent(keyring, []agent.Agent{agent.Agent(cag)})
+		ag = sshagent.NewWrappedAgent(keyring, []agent.Agent{agent.Agent(capiAgent)})
 	}
 	ctx = context.WithValue(ctx, "agent", ag)
 	ctx = context.WithValue(ctx, "hv", hvClient)
@@ -229,6 +253,9 @@ func main() {
 		menu.menu.Item("Quit", app.MENU_QUIT)
 	}
 
+	// Capture the startup generation before exposing actions that can clear keys.
+	startupKeyGeneration := sshagent.SavedKeyGeneration()
+
 	// show systray
 	buildMenu()
 	err = sysTray.Add()
@@ -238,12 +265,19 @@ func main() {
 		goto cleanup
 	}
 
-	// AutoLoad after the tray icon exists: key import toasts require the
-	// icon to be added first, otherwise Notify triggers an early NIM_ADD
-	// and the Add above fails with "Unspecified error". Runs in background
-	// so passphrase helpers never block the tray menu.
 	if keyring != nil {
-		go sshagent.AutoLoadKeys(keyring)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sshagent.AutoLoadKeys(keyring, !*disableAutoload, startupKeyGeneration)
+		}()
+	}
+	if capiAgent != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			capiAgent.RestoreSavedCertificates(startupKeyGeneration)
+		}()
 	}
 
 	// event
